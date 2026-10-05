@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>建築師法規 40天衝刺刷題系統</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+
+  <!-- 頂部導航 -->
+  <header>
+    <div class="logo-area" onclick="app.showDashboard()">
+      <span class="logo-badge">80/20</span>
+      <h1 class="app-title">建築師法規 40天衝刺</h1>
+    </div>
+    <div class="header-actions">
+      <div class="countdown-pill" id="countdownBadge">
+        ⏳ 剩 40 天
+      </div>
+      <button class="btn-outline" style="padding: 4px 10px; font-size: 0.8rem;" onclick="app.openSyncModal()">
+        📲 同步
+      </button>
+    </div>
+  </header>
+
+  <!-- 主內容容器 -->
+  <main>
+
+    <!-- 1. 首頁儀表板視圖 -->
+    <section id="view-dashboard" class="view-section active">
+      
+      <!-- 及格線安全感卡片 -->
+      <div class="dashboard-grid">
+        <div class="dash-card primary-gradient">
+          <div class="card-label">
+            <span>及格線動態雷達 (Pass Radar)</span>
+            <span class="pass-indicator risk" id="passStatusIndicator">衝刺中</span>
+          </div>
+          <div class="score-display">
+            <span class="score-num" id="estimatedScore">0.0</span>
+            <span class="score-target">/ 60.0 分及格線 (滿分100)</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="scoreProgressBar" style="width: 0%;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
+            <span>累計刷題：<b id="totalAnsweredCount" style="color: #fff;">0</b> / 400 題</span>
+            <span>綜合答對率：<b id="overallAccuracy" style="color: #10b981;">0%</b></span>
+          </div>
+        </div>
+
+        <div class="dash-card">
+          <div class="card-label">
+            <span>今日 30 分鐘複習進度</span>
+            <span style="color: #38bdf8; font-weight: 700;" id="todayTaskText">0 / 20 題</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="todayProgressBar" style="width: 0%; background: #38bdf8;"></div>
+          </div>
+          <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 12px; line-height: 1.5;">
+            💡 <b>80/20 策略</b>：每天刷 20 題真題 + 5 分鐘錯題消滅，40 天累積刷完 400 題真題，穩拿 60 分保底及格！
+          </p>
+        </div>
+      </div>
+
+      <!-- 核心模式入口清單 -->
+      <h2 style="font-size: 1.05rem; font-weight: 700; margin-bottom: 14px; color: #cbd5e1;">🎯 衝刺訓練模式</h2>
+      <div class="action-grid">
+
+        <!-- 每日20題 -->
+        <div class="action-card" onclick="app.startDailyQuiz()">
+          <div>
+            <div class="action-header">
+              <span class="action-icon">⚡</span>
+              <div class="action-title">今日 20 題速刷</div>
+            </div>
+            <div class="action-desc">
+              嚴格依五大核心法規佔比智能抽題（34%技術規則、19%都更危老、18%建築法、15%採購營造）。
+            </div>
+          </div>
+          <div class="badge-counter">⏳ 建議用時：15~20 分鐘</div>
+        </div>
+
+        <!-- 錯題大屠殺 -->
+        <div class="action-card hot-border" onclick="app.startMistakeQuiz()">
+          <div>
+            <div class="action-header">
+              <span class="action-icon">🔥</span>
+              <div class="action-title">錯題大屠殺</div>
+            </div>
+            <div class="action-desc">
+              雙星艾賓浩斯機制：專攻答錯題目，連續答對 2 次自動消滅出庫。
+            </div>
+          </div>
+          <div class="badge-counter" style="color: #f87171;">
+            庫存待消滅錯題：<span id="mistakeBadgeCount">0</span> 題
+          </div>
+        </div>
+
+        <!-- 高頻數字翻牌卡 -->
+        <div class="action-card number-border" onclick="app.showFlashcards()">
+          <div>
+            <div class="action-header">
+              <span class="action-icon">📇</span>
+              <div class="action-title">數字速記翻牌卡</div>
+            </div>
+            <div class="action-desc">
+              專攻罰鍰、年限、天數、坡度比、面積等 60 組法規必考客觀數字題。
+            </div>
+          </div>
+          <div class="badge-counter" style="color: #fbbf24;">⚡ 通勤零碎 3 分鐘速記</div>
+        </div>
+
+        <!-- 十大高頻專題 -->
+        <div class="action-card" onclick="app.showCategoryModal()">
+          <div>
+            <div class="action-header">
+              <span class="action-icon">📚</span>
+              <div class="action-title">十大高頻專題</div>
+            </div>
+            <div class="action-desc">
+              針對防火區劃、政府採購、建築師法、無障礙規範、國土計畫等十大單元分項擊破。
+            </div>
+          </div>
+          <div class="badge-counter">🎯 弱項重點突破</div>
+        </div>
+
+        <!-- 80題全真模擬考 -->
+        <div class="action-card" onclick="app.startMockExam()">
+          <div>
+            <div class="action-header">
+              <span class="action-icon">⏱️</span>
+              <div class="action-title">80 題全真模擬考</div>
+            </div>
+            <div class="action-desc">
+              完全比照考選部官方規格：80 題單選、倒數 120 分鐘、即時結算及格成績單。
+            </div>
+          </div>
+          <div class="badge-counter">🏆 考前驗收實力</div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- 2. 刷題作答視圖 -->
+    <section id="view-quiz" class="view-section">
+      
+      <div class="quiz-header">
+        <div class="quiz-meta">
+          <span class="cat-pill" id="quizCatTag">考點01 防火區劃</span>
+          <span class="hot-pill" id="quizHotTag" style="display: none;">🔥 政策熱點</span>
+          <span style="font-size: 0.85rem; color: var(--text-muted);" id="quizYearTag">114年 第1題</span>
+        </div>
+        <div style="font-size: 0.9rem; font-weight: 700; color: #38bdf8;" id="quizProgressNum">
+          1 / 20
+        </div>
+      </div>
+
+      <div class="question-box">
+        <div class="question-text" id="quizQuestionText">
+          題目加載中...
+        </div>
+
+        <div class="options-list" id="quizOptionsList">
+          <!-- 選項按鈕由 JS 動態生成 -->
+        </div>
+
+        <!-- 三秒秒殺解析卡片 -->
+        <div class="explanation-card" id="quizExplanationCard">
+          <div class="exp-header">
+            <span>🎯 解析與法規依據</span>
+            <span style="margin-left: auto; font-size: 0.8rem; color: #a7f3d0;" id="expLawRef">建築法§9</span>
+          </div>
+          <div class="exp-row">
+            <b>【秒殺關鍵】</b>：<span id="expKeyText" class="exp-highlight">關鍵字</span>
+          </div>
+          <div class="exp-trap" id="expTrapBox">
+            ⚠️ <b>考選部常見陷阱</b>：<span id="expTrapText">小心得與應對調</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="quiz-footer">
+        <div class="keyboard-hint">
+          ⌨️ 快捷鍵：<b>1/2/3/4</b> 作答，<b>Space 空白鍵</b> 下一題
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn-outline" onclick="app.showDashboard()">退出</button>
+          <button class="btn-primary" id="btnNextQuestion" onclick="app.nextQuestion()" disabled>
+            下一題 →
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- 3. 高頻數字翻牌卡視圖 -->
+    <section id="view-flashcards" class="view-section">
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <button class="btn-outline" onclick="app.showDashboard()">← 返回首頁</button>
+        <span style="font-size: 0.9rem; font-weight: 700; color: #fbbf24;" id="flashcardCounter">1 / 20</span>
+      </div>
+
+      <div class="flashcard-container" onclick="app.flipFlashcard()">
+        <div class="flashcard" id="flashcardElement">
+          
+          <!-- 正面 -->
+          <div class="card-face card-front">
+            <div>
+              <span class="cat-pill" style="border-color: #fbbf24; color: #fbbf24; background: transparent;" id="fcCatTag">
+                防火區劃
+              </span>
+            </div>
+            <div style="font-size: 1.25rem; font-weight: 700; line-height: 1.6; text-align: center; margin: auto 0;" id="fcQuestion">
+              問題載入中...
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted); text-align: center;">
+              👆 點擊卡片翻面看答案
+            </div>
+          </div>
+
+          <!-- 反面 -->
+          <div class="card-face card-back">
+            <div>
+              <span class="cat-pill" style="border-color: #38bdf8; color: #38bdf8; background: transparent;" id="fcLawTag">
+                法規依據
+              </span>
+            </div>
+            <div style="font-size: 1.15rem; font-weight: 600; line-height: 1.6; margin: auto 0;" id="fcAnswer">
+              答案載入中...
+            </div>
+            <div class="exp-trap" style="margin-top: 10px;" id="fcTrap">
+              陷阱提示
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="flashcard-nav">
+        <button class="btn-outline" onclick="app.prevFlashcard()">← 上一張</button>
+        <button class="btn-primary" onclick="app.nextFlashcard()">下一張 →</button>
+      </div>
+
+    </section>
+
+    <!-- 4. 結算/成績單視圖 -->
+    <section id="view-result" class="view-section">
+      <div class="dash-card" style="text-align: center; padding: 40px 20px;">
+        <div style="font-size: 3rem; margin-bottom: 10px;" id="resultEmoji">🎉</div>
+        <h2 style="font-size: 1.6rem; font-weight: 800; margin-bottom: 8px;" id="resultTitle">測驗完成！</h2>
+        <p style="color: var(--text-muted); margin-bottom: 24px;" id="resultSubtitle">今日份量已達成</p>
+
+        <div style="display: flex; justify-content: center; gap: 30px; margin-bottom: 30px;">
+          <div>
+            <div style="font-size: 2.5rem; font-weight: 800; color: #60a5fa;" id="resultScore">85.0</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">換算得分 (滿分100)</div>
+          </div>
+          <div style="border-left: 1px solid var(--border);"></div>
+          <div>
+            <div style="font-size: 2.5rem; font-weight: 800; color: #10b981;" id="resultAccuracy">85%</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">答對率</div>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 12px;">
+          <button class="btn-outline" onclick="app.showDashboard()">返回首頁</button>
+          <button class="btn-primary" onclick="app.startDailyQuiz()">再刷一輪 →</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 十大專題選單 Modal -->
+  <div class="modal-overlay" id="categoryModal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+        <h3 style="font-size: 1.1rem; font-weight: 700;">選擇高頻專題特訓</h3>
+        <button class="btn-outline" style="padding: 4px 8px;" onclick="app.closeCategoryModal()">✕</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto;" id="categoryListContainer">
+        <!-- 由 JS 動態生成專題列表 -->
+      </div>
+    </div>
+  </div>
+
+  <!-- 跨裝置進度同步 Modal -->
+  <div class="modal-overlay" id="syncModal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+        <h3 style="font-size: 1.1rem; font-weight: 700;">📲 跨裝置進度移轉</h3>
+        <button class="btn-outline" style="padding: 4px 8px;" onclick="app.closeSyncModal()">✕</button>
+      </div>
+      <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+        在電腦點擊「複製進度」，打開手機貼上即可 1 秒還原所有刷題紀錄與錯題本！
+      </p>
+
+      <textarea class="sync-textarea" id="syncCodeArea" placeholder="點擊下方按鈕生成代碼，或在此貼上手機的代碼..."></textarea>
+
+      <div style="display: flex; gap: 10px; justify-content: flex-end;">
+        <button class="btn-outline" onclick="app.exportSyncCode()">📋 複製當前進度</button>
+        <button class="btn-primary" onclick="app.importSyncCode()">📥 貼上並還原</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 題庫與核心腳本載入 -->
+  <script src="questions.js"></script>
+  <script src="flashcards.js"></script>
+  <script src="app.js"></script>
+
+  <!-- PWA Service Worker 註冊 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => {
+          console.log('SW register failed:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
