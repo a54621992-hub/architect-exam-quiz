@@ -822,8 +822,13 @@ main {
             ☆ 收藏
           </button>
         </div>
-        <div style="font-size: 0.9rem; font-weight: 700; color: #38bdf8;" id="quizProgressNum">
-          1 / 20
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="countdown-pill" id="mockTimerBadge" style="display: none; border-color: #ef4444; color: #f87171; background: rgba(239, 68, 68, 0.15); font-weight: 700; font-size: 0.85rem; padding: 2px 8px;">
+            ⏱️ 120:00
+          </div>
+          <div style="font-size: 0.9rem; font-weight: 700; color: #38bdf8;" id="quizProgressNum">
+            1 / 20
+          </div>
         </div>
       </div>
 
@@ -18306,7 +18311,9 @@ const app = {
     quizCorrectCount: 0,
     fcIndex: 0,
     fcCategory: "ALL",
-    currentCards: []
+    currentCards: [],
+    mockTimeLeft: 0,
+    mockTimerId: null
   },
 
   init() {
@@ -18441,6 +18448,7 @@ const app = {
   },
 
   showDashboard() {
+    this.stopMockTimer();
     this.renderDashboard();
     this.showView("view-dashboard");
   },
@@ -18448,6 +18456,7 @@ const app = {
   // 5. 抽題演算法 (800 題規模)
   // 每日 20 題速刷
   startDailyQuiz() {
+    this.stopMockTimer();
     this.state.quizMode = "daily";
     this.state.currentIndex = 0;
     this.state.quizCorrectCount = 0;
@@ -18462,6 +18471,7 @@ const app = {
 
   // 錯題大屠殺
   startMistakeQuiz() {
+    this.stopMockTimer();
     const mistakeIds = Object.keys(this.state.mistakes);
     if (mistakeIds.length === 0) {
       alert("太棒了！目前錯題本空空如也，沒有待消滅的錯題！");
@@ -18475,6 +18485,27 @@ const app = {
     // 篩選錯題
     const filtered = RAW_QUESTIONS.filter(q => mistakeIds.includes(q.id));
     this.state.currentQuiz = filtered.sort(() => 0.5 - Math.random()).slice(0, 20);
+
+    this.showView("view-quiz");
+    this.renderQuestion();
+  },
+
+  // 重點標記收藏刷題
+  startFavoritesQuiz() {
+    this.stopMockTimer();
+    const favIds = this.state.favorites || [];
+    if (favIds.length === 0) {
+      alert("目前尚無標記收藏的題目！可在平時刷題時點擊右上角「☆ 收藏」加入！");
+      return;
+    }
+
+    this.state.quizMode = "favorites";
+    this.state.currentIndex = 0;
+    this.state.quizCorrectCount = 0;
+
+    // 篩選收藏題目
+    const filtered = RAW_QUESTIONS.filter(q => favIds.includes(q.id));
+    this.state.currentQuiz = filtered.sort(() => 0.5 - Math.random());
 
     this.showView("view-quiz");
     this.renderQuestion();
@@ -18521,6 +18552,7 @@ const app = {
   },
 
   startCategoryQuiz(catId) {
+    this.stopMockTimer();
     this.closeCategoryModal();
     this.state.quizMode = "category";
     this.state.currentIndex = 0;
@@ -18533,11 +18565,12 @@ const app = {
     this.renderQuestion();
   },
 
-  // 80 題全真模擬考
+  // 80 題全真模擬考 (120 分鐘限時)
   startMockExam() {
     if (!confirm("即將開始 80 題全真模擬考！測驗時間共 120 分鐘，是否確認開始？")) {
       return;
     }
+    this.stopMockTimer();
     this.state.quizMode = "mock";
     this.state.currentIndex = 0;
     this.state.quizCorrectCount = 0;
@@ -18547,7 +18580,88 @@ const app = {
     this.state.currentQuiz = shuffled.slice(0, 80);
 
     this.showView("view-quiz");
+    this.startMockTimer();
     this.renderQuestion();
+  },
+
+  // 計時器邏輯
+  startMockTimer() {
+    this.stopMockTimer();
+    // 120 分鐘 = 7200 秒
+    this.state.mockTimeLeft = 120 * 60;
+    const badge = document.getElementById("mockTimerBadge");
+    if (badge) {
+      badge.style.display = "inline-flex";
+      badge.innerHTML = `⏱️ ${this.formatMockTime(this.state.mockTimeLeft)}`;
+    }
+    this.state.mockTimerId = setInterval(() => {
+      this.state.mockTimeLeft--;
+      if (this.state.mockTimeLeft <= 0) {
+        this.stopMockTimer();
+        if (badge) badge.innerHTML = `⏱️ 00:00`;
+        alert("⏰ 120 分鐘測驗時間到！系統將自動為您交卷結算！");
+        this.finishQuiz();
+      } else {
+        if (badge) {
+          badge.innerHTML = `⏱️ ${this.formatMockTime(this.state.mockTimeLeft)}`;
+        }
+      }
+    }, 1000);
+  },
+
+  stopMockTimer() {
+    if (this.state.mockTimerId) {
+      clearInterval(this.state.mockTimerId);
+      this.state.mockTimerId = null;
+    }
+    const badge = document.getElementById("mockTimerBadge");
+    if (badge) {
+      badge.style.display = "none";
+    }
+  },
+
+  formatMockTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  },
+
+  // 收藏功能邏輯
+  toggleFavorite() {
+    const q = this.state.currentQuiz[this.state.currentIndex];
+    if (!q) return;
+    if (!this.state.favorites) this.state.favorites = [];
+    const idx = this.state.favorites.indexOf(q.id);
+    if (idx >= 0) {
+      this.state.favorites.splice(idx, 1);
+    } else {
+      this.state.favorites.push(q.id);
+    }
+    this.saveState();
+    this.updateFavoriteButton();
+    const favEl = document.getElementById("favoritesBadgeCount");
+    if (favEl) favEl.innerText = this.state.favorites.length;
+  },
+
+  updateFavoriteButton() {
+    const btn = document.getElementById("btnBookmark");
+    if (!btn) return;
+    const q = this.state.currentQuiz[this.state.currentIndex];
+    if (!q) return;
+    const isFav = (this.state.favorites || []).includes(q.id);
+    if (isFav) {
+      btn.innerHTML = "★ 已收藏";
+      btn.style.background = "#fbbf24";
+      btn.style.color = "#0f172a";
+      btn.style.borderColor = "#fbbf24";
+      btn.style.fontWeight = "bold";
+    } else {
+      btn.innerHTML = "☆ 收藏";
+      btn.style.background = "transparent";
+      btn.style.color = "#fbbf24";
+      btn.style.borderColor = "#fbbf24";
+      btn.style.fontWeight = "normal";
+    }
   },
 
   // 6. 渲染當前題目
@@ -18573,10 +18687,18 @@ const app = {
     const hotTag = document.getElementById("quizHotTag");
     hotTag.style.display = q.is_hot ? "inline-block" : "none";
 
+    // 模擬考計時器 Badge 控制
+    const timerBadge = document.getElementById("mockTimerBadge");
+    if (timerBadge) {
+      timerBadge.style.display = this.state.quizMode === "mock" ? "inline-flex" : "none";
+    }
+
     document.getElementById("quizQuestionText").innerText = q.stem;
 
-    // 更新收藏按鈕狀態
-    this.updateFavoriteButton();
+    // 更新收藏按鈕狀態 (防禦性呼叫)
+    if (typeof this.updateFavoriteButton === "function") {
+      this.updateFavoriteButton();
+    }
 
     // 選項渲染
     const optList = document.getElementById("quizOptionsList");
@@ -18584,7 +18706,7 @@ const app = {
 
     const keys = ["A", "B", "C", "D"];
     keys.forEach((k) => {
-      const text = q.options[k] || "";
+      const text = (q.options && q.options[k]) ? q.options[k] : "";
       const btn = document.createElement("button");
       btn.className = "option-btn";
       btn.id = `optBtn_${k}`;
@@ -18696,6 +18818,7 @@ const app = {
 
   // 9. 結算測驗
   finishQuiz() {
+    this.stopMockTimer();
     const total = this.state.currentQuiz.length;
     const correct = this.state.quizCorrectCount;
     const acc = total > 0 ? (correct / total) * 100 : 0;
@@ -18758,6 +18881,7 @@ const app = {
   },
 
   showFlashcards() {
+    this.stopMockTimer();
     this.applyFlashcardFilter();
     this.showView("view-flashcards");
   },
