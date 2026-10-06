@@ -1,5 +1,5 @@
-// 敷地計畫與都市設計 Service Worker
-const CACHE_NAME = 'site-exam-cache-v1';
+// 敷地速刷 Service Worker v2
+const CACHE_NAME = 'site-exam-cache-v2';
 const ASSETS = [
   './',
   './index.html',
