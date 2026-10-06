@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>建築師法規 40天衝刺刷題系統</title>
-  <link rel="stylesheet" href="styles.css?v=2.0">
+  <link rel="stylesheet" href="styles.css?v=2.1">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -66,7 +66,7 @@
             <div class="progress-bar-fill" id="todayProgressBar" style="width: 0%; background: #38bdf8;"></div>
           </div>
           <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 12px; line-height: 1.5;">
-            💡 <b>80/20 策略</b>：每天刷 20 題真題 + 5 分鐘錯題消滅，40 天累積刷完 400 題真題，穩拿 60 分保底及格！
+            💡 <b>80/20 策略</b>：每天刷 20 題真題 + 5 分鐘錯題消滅，40 天累積刷完 800 題高頻衝刺題庫（400 題歷屆正本 + 400 題高頻模擬），穩拿 60 分保底及格！
           </p>
         </div>
       </div>
@@ -147,6 +147,22 @@
           <div class="badge-counter">🏆 考前驗收實力</div>
         </div>
 
+        <!-- 重點標記收藏 -->
+        <div class="action-card" onclick="app.startFavoritesQuiz()">
+          <div>
+            <div class="action-header">
+              <span class="action-icon">⭐</span>
+              <div class="action-title">重點標記收藏</div>
+            </div>
+            <div class="action-desc">
+              平時刷題標記星號的精華難題庫，考前 3 天衝刺快速巡檢消滅盲點。
+            </div>
+          </div>
+          <div class="badge-counter" style="color: #fbbf24;">
+            收藏題數：<span id="favoritesBadgeCount">0</span> 題
+          </div>
+        </div>
+
       </div>
 
     </section>
@@ -159,6 +175,9 @@
           <span class="cat-pill" id="quizCatTag">考點01 防火區劃</span>
           <span class="hot-pill" id="quizHotTag" style="display: none;">🔥 政策熱點</span>
           <span style="font-size: 0.85rem; color: var(--text-muted);" id="quizYearTag">114年 第1題</span>
+          <button class="btn-outline" style="padding: 2px 8px; font-size: 0.75rem; border-color: #fbbf24; color: #fbbf24;" id="btnBookmark" onclick="app.toggleFavorite()">
+            ☆ 收藏
+          </button>
         </div>
         <div style="font-size: 0.9rem; font-weight: 700; color: #38bdf8;" id="quizProgressNum">
           1 / 20
@@ -321,9 +340,9 @@
   </div>
 
   <!-- 題庫與核心腳本載入 -->
-  <script src="questions.js?v=2.0"></script>
-  <script src="flashcards.js?v=2.0"></script>
-  <script src="app.js?v=2.0"></script>
+  <script src="questions.js?v=2.1"></script>
+  <script src="flashcards.js?v=2.1"></script>
+  <script src="app.js?v=2.1"></script>
 
   <!-- PWA Service Worker 註冊 -->
   <script>

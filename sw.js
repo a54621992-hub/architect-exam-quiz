@@ -1,11 +1,11 @@
-const CACHE_NAME = 'arch-law-cache-v2';
+const CACHE_NAME = 'arch-law-cache-v2.1';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=2.0',
-  './app.js?v=2.0',
-  './questions.js?v=2.0',
-  './flashcards.js?v=2.0',
+  './styles.css?v=2.1',
+  './app.js?v=2.1',
+  './questions.js?v=2.1',
+  './flashcards.js?v=2.1',
   './manifest.json'
 ];
 

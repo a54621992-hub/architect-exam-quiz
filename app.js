@@ -7,9 +7,10 @@ const app = {
     todayAnswered: 0,
     lastDate: "",
     mistakes: {}, // { [qId]: { streak: 0, count: 1 } }
+    favorites: [], // [qId]
     currentQuiz: [],
     currentIndex: 0,
-    quizMode: "daily", // 'daily', 'mistake', 'category', 'mock'
+    quizMode: "daily", // 'daily', 'mistake', 'category', 'mock', 'favorites'
     hasAnswered: false,
     quizCorrectCount: 0,
     fcIndex: 0,
@@ -47,6 +48,7 @@ const app = {
         this.state.answeredTotal = parsed.answeredTotal || 0;
         this.state.correctTotal = parsed.correctTotal || 0;
         this.state.mistakes = parsed.mistakes || {};
+        this.state.favorites = parsed.favorites || [];
         this.state.lastDate = parsed.lastDate || "";
         this.state.todayAnswered = parsed.todayAnswered || 0;
       }
@@ -73,6 +75,7 @@ const app = {
         answeredTotal: this.state.answeredTotal,
         correctTotal: this.state.correctTotal,
         mistakes: this.state.mistakes,
+        favorites: this.state.favorites,
         lastDate: this.state.lastDate,
         todayAnswered: this.state.todayAnswered
       };
@@ -114,12 +117,24 @@ const app = {
     // 今日進度
     const todayTarget = 20;
     const todayPercent = Math.min(100, (this.state.todayAnswered / todayTarget) * 100);
-    document.getElementById("todayTaskText").innerText = `${this.state.todayAnswered} / ${todayTarget} 題`;
+    const todayTaskEl = document.getElementById("todayTaskText");
+    if (this.state.todayAnswered >= todayTarget) {
+      todayTaskEl.innerText = `${this.state.todayAnswered} / ${todayTarget} 題 (已達標 🎉)`;
+      todayTaskEl.style.color = "#10b981";
+    } else {
+      todayTaskEl.innerText = `${this.state.todayAnswered} / ${todayTarget} 題`;
+      todayTaskEl.style.color = "#38bdf8";
+    }
     document.getElementById("todayProgressBar").style.width = todayPercent + "%";
 
     // 錯題計數
     const mistakeCount = Object.keys(this.state.mistakes).length;
     document.getElementById("mistakeBadgeCount").innerText = mistakeCount;
+
+    // 收藏計數
+    const favCount = (this.state.favorites || []).length;
+    const favEl = document.getElementById("favoritesBadgeCount");
+    if (favEl) favEl.innerText = favCount;
   },
 
   // 4. 視圖導航
@@ -259,6 +274,9 @@ const app = {
     if (q.source_type) {
       sourceLabel = `[${q.source_type}] ${sourceLabel}`;
     }
+    if (q.answer === '#') {
+      sourceLabel += ` [考選部一律給分]`;
+    }
     document.getElementById("quizYearTag").innerText = sourceLabel;
 
     const hotTag = document.getElementById("quizHotTag");
@@ -266,12 +284,15 @@ const app = {
 
     document.getElementById("quizQuestionText").innerText = q.stem;
 
+    // 更新收藏按鈕狀態
+    this.updateFavoriteButton();
+
     // 選項渲染
     const optList = document.getElementById("quizOptionsList");
     optList.innerHTML = "";
 
     const keys = ["A", "B", "C", "D"];
-    keys.forEach((k, idx) => {
+    keys.forEach((k) => {
       const text = q.options[k] || "";
       const btn = document.createElement("button");
       btn.className = "option-btn";
@@ -290,17 +311,22 @@ const app = {
     document.getElementById("btnNextQuestion").disabled = true;
 
     // 預設解析內容
-    document.getElementById("expLawRef").innerText = q.law || "相關法規";
+    document.getElementById("expLawRef").innerText = q.law || "相關法規綜合條文";
     
     // 秒殺關鍵字與解析
     let keyPhrase = q.explanation ? q.explanation : `正確解答為 (${q.answer})。`;
+    if (q.answer === '#') {
+      keyPhrase = q.explanation || "<b>【考選部官方公告】</b>：本題考選部官方公告全體一律給分（代號 #）。因法規適用爭議或題幹選項疑義，全部選項均核計分數。";
+    }
     if (q.analysis_key) {
-      keyPhrase = `<b>【核心記憶】</b>：${q.analysis_key}<br>${keyPhrase}`;
+      keyPhrase = `<div style="margin-bottom: 6px;"><b style="color: #fbbf24;">【核心記憶 / 正確數值】</b>：<span style="color: #fef08a;">${q.analysis_key}</span></div>${keyPhrase}`;
     }
     document.getElementById("expKeyText").innerHTML = keyPhrase;
 
     let trapPhrase = `注意題幹是問「何者錯誤」還是「何者正確」；小心『得』與『應』之法律效果差異。`;
-    if (q.is_hot) {
+    if (q.answer === '#') {
+      trapPhrase = `⚠️ <b>考選部公告給分</b>：本題為歷史爭議題，作答任一選項均核計答對分數。`;
+    } else if (q.is_hot) {
       trapPhrase = `🔥 <b>最新修法重點</b>：本考點為近年修法政策焦點，請依現行法規最新規定為準。`;
     }
     document.getElementById("expTrapText").innerHTML = trapPhrase;
@@ -312,7 +338,8 @@ const app = {
     this.state.hasAnswered = true;
 
     const q = this.state.currentQuiz[this.state.currentIndex];
-    const isCorrect = selectedKey.toUpperCase() === q.answer.toUpperCase();
+    const isAllPass = (q.answer === '#');
+    const isCorrect = isAllPass || (selectedKey.toUpperCase() === q.answer.toUpperCase());
 
     // 更新累積統計
     this.state.answeredTotal++;
@@ -324,9 +351,11 @@ const app = {
 
     // 更新按鈕樣式
     const selectedBtn = document.getElementById(`optBtn_${selectedKey}`);
-    const correctBtn = document.getElementById(`optBtn_${q.answer}`);
+    const correctBtn = q.answer !== '#' ? document.getElementById(`optBtn_${q.answer}`) : null;
 
-    if (isCorrect) {
+    if (isAllPass) {
+      if (selectedBtn) selectedBtn.classList.add("correct");
+    } else if (isCorrect) {
       if (selectedBtn) selectedBtn.classList.add("correct");
       // 若在錯題本中答對，增加 streak
       if (this.state.mistakes[q.id]) {
@@ -347,6 +376,15 @@ const app = {
         this.state.mistakes[q.id].count++;
       }
     }
+
+    // 禁用所有按鈕點擊，未選中的按鈕半透明
+    const optButtons = document.querySelectorAll(".option-btn");
+    optButtons.forEach(btn => {
+      btn.style.pointerEvents = "none";
+      if (!btn.classList.contains("correct") && !btn.classList.contains("wrong")) {
+        btn.style.opacity = "0.55";
+      }
+    });
 
     this.saveState();
 
@@ -482,21 +520,41 @@ const app = {
   bindKeyboard() {
     window.addEventListener("keydown", e => {
       const activeView = document.querySelector(".view-section.active");
-      if (!activeView || activeView.id !== "view-quiz") return;
+      if (!activeView) return;
 
-      const key = e.key.toUpperCase();
-      if (["1", "2", "3", "4", "A", "B", "C", "D"].includes(key)) {
-        let optKey = key;
-        if (key === "1") optKey = "A";
-        if (key === "2") optKey = "B";
-        if (key === "3") optKey = "C";
-        if (key === "4") optKey = "D";
-        this.handleAnswer(optKey);
-      } else if (e.code === "Space") {
-        e.preventDefault();
-        const nextBtn = document.getElementById("btnNextQuestion");
-        if (nextBtn && !nextBtn.disabled) {
-          this.nextQuestion();
+      // 刷題視圖快捷鍵
+      if (activeView.id === "view-quiz") {
+        const key = e.key.toUpperCase();
+        if (["1", "2", "3", "4", "A", "B", "C", "D"].includes(key)) {
+          let optKey = key;
+          if (key === "1") optKey = "A";
+          if (key === "2") optKey = "B";
+          if (key === "3") optKey = "C";
+          if (key === "4") optKey = "D";
+          this.handleAnswer(optKey);
+        } else if (e.code === "Space") {
+          e.preventDefault();
+          const nextBtn = document.getElementById("btnNextQuestion");
+          if (nextBtn && !nextBtn.disabled) {
+            this.nextQuestion();
+          }
+        } else if (key === "S" || key === "F") {
+          // 快捷鍵 S 或 F 收藏/取消收藏
+          this.toggleFavorite();
+        }
+      }
+      
+      // 翻牌卡視圖快捷鍵
+      else if (activeView.id === "view-flashcards") {
+        if (e.code === "Space" || e.code === "Enter") {
+          e.preventDefault();
+          this.flipFlashcard();
+        } else if (e.code === "ArrowRight" || e.key.toUpperCase() === "D") {
+          e.preventDefault();
+          this.nextFlashcard();
+        } else if (e.code === "ArrowLeft" || e.key.toUpperCase() === "A") {
+          e.preventDefault();
+          this.prevFlashcard();
         }
       }
     });
@@ -516,6 +574,7 @@ const app = {
       answeredTotal: this.state.answeredTotal,
       correctTotal: this.state.correctTotal,
       mistakes: this.state.mistakes,
+      favorites: this.state.favorites || [],
       lastDate: this.state.lastDate,
       todayAnswered: this.state.todayAnswered,
       lastFcIndex: this.state.fcIndex,
@@ -544,6 +603,7 @@ const app = {
       this.state.answeredTotal = parsed.answeredTotal || 0;
       this.state.correctTotal = parsed.correctTotal || 0;
       this.state.mistakes = parsed.mistakes || {};
+      this.state.favorites = parsed.favorites || [];
       this.state.lastDate = parsed.lastDate || "";
       this.state.todayAnswered = parsed.todayAnswered || 0;
       if (parsed.lastFcIndex !== undefined) {
@@ -553,7 +613,7 @@ const app = {
       this.saveState();
       this.renderDashboard();
       this.closeSyncModal();
-      alert("🎉 進度同步還原成功！所有答題與錯題紀錄已更新！");
+      alert("🎉 進度同步還原成功！所有答題、收藏與錯題紀錄已更新！");
     } catch (e) {
       alert("❌ 代碼格式不正確，請確認完整複製！");
     }

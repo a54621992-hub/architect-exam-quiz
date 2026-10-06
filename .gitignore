@@ -1,0 +1,4 @@
+scratch/
+__pycache__/
+*.pyc
+generate_result_111_1.py
