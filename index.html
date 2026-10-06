@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>建築師法規 40天衝刺刷題系統</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=2.0">
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -22,6 +22,9 @@
       <div class="countdown-pill" id="countdownBadge">
         ⏳ 剩 40 天
       </div>
+      <button class="btn-outline" style="padding: 4px 8px; font-size: 0.8rem;" onclick="app.forceRefresh()" title="清快取更新至最新版本">
+        🔄 更新
+      </button>
       <button class="btn-outline" style="padding: 4px 10px; font-size: 0.8rem;" onclick="app.openSyncModal()">
         📲 同步
       </button>
@@ -318,9 +321,9 @@
   </div>
 
   <!-- 題庫與核心腳本載入 -->
-  <script src="questions.js"></script>
-  <script src="flashcards.js"></script>
-  <script src="app.js"></script>
+  <script src="questions.js?v=2.0"></script>
+  <script src="flashcards.js?v=2.0"></script>
+  <script src="app.js?v=2.0"></script>
 
   <!-- PWA Service Worker 註冊 -->
   <script>

@@ -19,13 +19,14 @@ with open(os.path.join(base_dir, "app.js"), encoding="utf-8") as f:
     app_js = f.read()
 
 # 內嵌 css
-html = html.replace('<link rel="stylesheet" href="styles.css">', f"<style>\n{css}\n</style>")
+import re
+html = re.sub(r'<link rel="stylesheet" href="styles\.css(?:\?v=[^"]*)?">', f"<style>\n{css}\n</style>", html)
 
 # 內嵌 js
 bundle_js = f"<script>\n{q_js}\n\n{fc_js}\n\n{app_js}\n</script>"
-html = html.replace('<script src="questions.js"></script>', "")
-html = html.replace('<script src="flashcards.js"></script>', "")
-html = html.replace('<script src="app.js"></script>', bundle_js)
+html = re.sub(r'<script src="questions\.js(?:\?v=[^"]*)?"></script>', "", html)
+html = re.sub(r'<script src="flashcards\.js(?:\?v=[^"]*)?"></script>', "", html)
+html = re.sub(r'<script src="app\.js(?:\?v=[^"]*)?"></script>', bundle_js, html)
 
 bundle_path_scratch = os.path.join(base_dir, "index_bundle.html")
 bundle_path_drive = os.path.join(drive_dir, "index_bundle.html")

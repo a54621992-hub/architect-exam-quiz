@@ -557,6 +557,33 @@ const app = {
     } catch (e) {
       alert("❌ 代碼格式不正確，請確認完整複製！");
     }
+  },
+
+  // 14. 強制清空快取更新版本
+  forceRefresh() {
+    if (!confirm("確定要強制檢查並更新至最新題庫與小卡版本嗎？（您的答題紀錄將妥善保留）")) {
+      return;
+    }
+    const promises = [];
+    if ('serviceWorker' in navigator) {
+      promises.push(
+        navigator.serviceWorker.getRegistrations().then(regs => {
+          return Promise.all(regs.map(r => r.unregister()));
+        })
+      );
+    }
+    if ('caches' in window) {
+      promises.push(
+        caches.keys().then(keys => {
+          return Promise.all(keys.map(k => caches.delete(k)));
+        })
+      );
+    }
+    Promise.all(promises).then(() => {
+      window.location.reload(true);
+    }).catch(() => {
+      window.location.reload(true);
+    });
   }
 };
 
