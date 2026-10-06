@@ -6,8 +6,12 @@
   <title>敷地計畫與都市設計｜零散時間極速複習 APP</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="敷地速刷">
   <meta name="theme-color" content="#0f172a">
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -339,9 +343,12 @@
           <span class="text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400" id="diag-id-badge">01/11</span>
         </div>
 
-        <!-- 向量 SVG 圖像展示區 (點擊可放大) -->
-        <div class="bg-white rounded-xl p-2 flex items-center justify-center overflow-hidden border border-slate-700 min-h-[180px]" id="diag-svg-box">
+        <!-- 向量 SVG 圖像展示區 (點擊自動橫向全螢幕放大) -->
+        <div onclick="openCurrentDiagLightbox()" class="bg-white rounded-xl p-2 flex items-center justify-center overflow-hidden border border-slate-700 min-h-[180px] cursor-zoom-in relative group shadow-inner" id="diag-svg-box">
           <!-- SVG 插入處 -->
+        </div>
+        <div class="text-[11px] text-emerald-400/90 text-center font-medium flex items-center justify-center space-x-1 cursor-pointer" onclick="openCurrentDiagLightbox()">
+          <span>🔍 點擊上方圖片自動切換【橫向滿版放大】</span>
         </div>
 
         <!-- 3 分鐘畫法與 Checklist -->
@@ -922,10 +929,16 @@
           <div class="space-y-2 text-center">
             <span class="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold">4. 萬用圖卡大腦心像</span>
             <div class="text-sm font-bold text-white">${item.data.header}</div>
-            <div class="bg-white rounded-xl p-1 max-h-[160px] overflow-hidden flex items-center justify-center my-2">
+            <div onclick="openDiagramLightbox(capsuleQueue[capsuleStep].data.svg_code, capsuleQueue[capsuleStep].data.header)" class="bg-white rounded-xl p-2 max-h-[170px] overflow-hidden flex items-center justify-center my-2 cursor-zoom-in relative group border border-slate-700 shadow-inner">
               ${item.data.svg_code}
+              <div class="absolute bottom-1 right-2 bg-slate-900/85 backdrop-blur-sm text-emerald-400 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center space-x-1">
+                <span>🔍</span><span>點擊橫向全螢幕</span>
+              </div>
             </div>
-            <p class="text-xs text-slate-300">必標：${item.data.must_mark}</p>
+            <div class="text-[10px] text-emerald-400 cursor-pointer" onclick="openDiagramLightbox(capsuleQueue[capsuleStep].data.svg_code, capsuleQueue[capsuleStep].data.header)">
+              👆 點擊圖片自動轉橫向滿版放大
+            </div>
+            <p class="text-xs text-slate-300 mt-1">必標：${item.data.must_mark}</p>
           </div>
         `;
       }
@@ -956,5 +969,29 @@
       switchView(appState.currentView || 'capsule');
     });
   </script>
+
+  <!-- 萬用圖卡全螢幕橫向放大燈箱 (Fullscreen Landscape Lightbox) -->
+  <div id="diagram-lightbox" class="fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-2 hidden select-none" onclick="closeDiagramLightbox()">
+    <!-- 頂部控制按鈕 -->
+    <div class="absolute top-4 right-4 z-60 flex items-center space-x-2">
+      <button onclick="event.stopPropagation(); toggleLightboxRotate()" class="px-3 py-1.5 rounded-full bg-slate-850 hover:bg-slate-750 text-slate-200 border border-slate-700 text-xs font-bold shadow-lg flex items-center space-x-1">
+        <span>🔄</span> <span>切換橫/直</span>
+      </button>
+      <button onclick="closeDiagramLightbox()" class="w-9 h-9 rounded-full bg-slate-800 text-slate-200 hover:text-white flex items-center justify-center font-bold text-sm shadow-lg border border-slate-700">
+        ✕
+      </button>
+    </div>
+
+    <!-- 底部返回提示 -->
+    <div class="absolute bottom-3 left-0 right-0 text-center text-xs text-slate-400 pointer-events-none">
+      👆 點擊任意處退出全螢幕
+    </div>
+
+    <!-- 放大旋轉圖片容器 -->
+    <div id="lightbox-content-box" class="bg-white rounded-2xl p-4 shadow-2xl flex items-center justify-center transition-all duration-300 overflow-hidden" onclick="event.stopPropagation()">
+      <!-- 動態插入 SVG -->
+    </div>
+  </div>
+
 </body>
 </html>
