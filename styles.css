@@ -576,6 +576,44 @@ main {
   resize: none;
 }
 
+/* 翻牌卡分類篩選列 */
+.fc-category-scroll {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+  scrollbar-width: none;
+}
+.fc-category-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.fc-pill-btn {
+  background-color: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fc-pill-btn:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.fc-pill-btn.active {
+  background-color: #2563eb;
+  border-color: #3b82f6;
+  color: #fff;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+}
+
 /* 手機適配響應式 */
 @media (max-width: 640px) {
   header {

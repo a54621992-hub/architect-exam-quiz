@@ -49,7 +49,7 @@
             <div class="progress-bar-fill" id="scoreProgressBar" style="width: 0%;"></div>
           </div>
           <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
-            <span>累計刷題：<b id="totalAnsweredCount" style="color: #fff;">0</b> / 400 題</span>
+            <span>累計刷題：<b id="totalAnsweredCount" style="color: #fff;">0</b> / 800 題</span>
             <span>綜合答對率：<b id="overallAccuracy" style="color: #10b981;">0%</b></span>
           </div>
         </div>
@@ -203,9 +203,14 @@
     <!-- 3. 高頻數字翻牌卡視圖 -->
     <section id="view-flashcards" class="view-section">
       
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
         <button class="btn-outline" onclick="app.showDashboard()">← 返回首頁</button>
-        <span style="font-size: 0.9rem; font-weight: 700; color: #fbbf24;" id="flashcardCounter">1 / 20</span>
+        <span style="font-size: 0.9rem; font-weight: 700; color: #fbbf24;" id="flashcardCounter">1 / 60</span>
+      </div>
+
+      <!-- 翻牌卡分類滾動選擇列 -->
+      <div class="fc-category-scroll" id="fcCategoryPills">
+        <!-- 由 JS 動態生成分類按鈕 -->
       </div>
 
       <div class="flashcard-container" onclick="app.flipFlashcard()">

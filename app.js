@@ -1,4 +1,4 @@
-// 建築師法規 40天衝刺刷題系統 - 核心邏輯
+// 建築師法規 40天衝刺刷題系統 - 核心邏輯 (800題 + 60張記憶翻牌卡)
 const app = {
   // 狀態
   state: {
@@ -12,7 +12,9 @@ const app = {
     quizMode: "daily", // 'daily', 'mistake', 'category', 'mock'
     hasAnswered: false,
     quizCorrectCount: 0,
-    fcIndex: 0
+    fcIndex: 0,
+    fcCategory: "ALL",
+    currentCards: []
   },
 
   init() {
@@ -21,6 +23,7 @@ const app = {
     this.renderDashboard();
     this.bindKeyboard();
     this.renderCategoryList();
+    this.initFlashcardCategories();
   },
 
   // 1. 考期倒數 (目標: 2026/11/14)
@@ -46,6 +49,10 @@ const app = {
         this.state.mistakes = parsed.mistakes || {};
         this.state.lastDate = parsed.lastDate || "";
         this.state.todayAnswered = parsed.todayAnswered || 0;
+      }
+      const savedFcIdx = localStorage.getItem("ARCH_LAW_LAST_FC_INDEX");
+      if (savedFcIdx !== null) {
+        this.state.fcIndex = parseInt(savedFcIdx, 10) || 0;
       }
     } catch (e) {
       console.warn("Load state error:", e);
@@ -75,7 +82,7 @@ const app = {
     }
   },
 
-  // 3. 儀表板與及格雷達渲染
+  // 3. 儀表板與及格雷達渲染 (800 題規模)
   renderDashboard() {
     const totalAns = this.state.answeredTotal;
     const totalCorrect = this.state.correctTotal;
@@ -132,14 +139,14 @@ const app = {
     this.showView("view-dashboard");
   },
 
-  // 5. 抽題演算法
+  // 5. 抽題演算法 (800 題規模)
   // 每日 20 題速刷
   startDailyQuiz() {
     this.state.quizMode = "daily";
     this.state.currentIndex = 0;
     this.state.quizCorrectCount = 0;
 
-    // 從 400 題隨機抽 20 題
+    // 從 800 題隨機抽 20 題 (兼顧歷屆與新增題目)
     const shuffled = [...RAW_QUESTIONS].sort(() => 0.5 - Math.random());
     this.state.currentQuiz = shuffled.slice(0, 20);
 
@@ -246,7 +253,13 @@ const app = {
 
     document.getElementById("quizProgressNum").innerText = `${curr} / ${total}`;
     document.getElementById("quizCatTag").innerText = q.cat_name || "營建法規";
-    document.getElementById("quizYearTag").innerText = `${q.year}年 第${q.q_num}題`;
+    
+    // 來源與年份標籤
+    let sourceLabel = `${q.year}年 第${q.q_num}題`;
+    if (q.source_type) {
+      sourceLabel = `[${q.source_type}] ${sourceLabel}`;
+    }
+    document.getElementById("quizYearTag").innerText = sourceLabel;
 
     const hotTag = document.getElementById("quizHotTag");
     hotTag.style.display = q.is_hot ? "inline-block" : "none";
@@ -279,21 +292,18 @@ const app = {
     // 預設解析內容
     document.getElementById("expLawRef").innerText = q.law || "相關法規";
     
-    // 生成三秒秒殺關鍵字
-    let keyPhrase = `正確解答為 (${q.answer})。`;
-    if (q.stem.includes("罰鍰")) {
-      keyPhrase += `罰鍰金額題：請牢記該法法定額度，避免被級距數字誤導。`;
-    } else if (q.stem.includes("無障礙")) {
-      keyPhrase += `無障礙核心：坡度不得大於 1:12，迴轉空間直徑不得小於 150 cm。`;
-    } else if (q.stem.includes("防火區劃")) {
-      keyPhrase += `防火區劃原則每 1500 m²，有自動滅火加倍為 3000 m²。`;
-    } else {
-      keyPhrase += `熟記條文之法定主體、程序與排除例外條件。`;
+    // 秒殺關鍵字與解析
+    let keyPhrase = q.explanation ? q.explanation : `正確解答為 (${q.answer})。`;
+    if (q.analysis_key) {
+      keyPhrase = `<b>【核心記憶】</b>：${q.analysis_key}<br>${keyPhrase}`;
     }
-    document.getElementById("expKeyText").innerText = keyPhrase;
+    document.getElementById("expKeyText").innerHTML = keyPhrase;
 
     let trapPhrase = `注意題幹是問「何者錯誤」還是「何者正確」；小心『得』與『應』之法律效果差異。`;
-    document.getElementById("expTrapText").innerText = trapPhrase;
+    if (q.is_hot) {
+      trapPhrase = `🔥 <b>最新修法重點</b>：本考點為近年修法政策焦點，請依現行法規最新規定為準。`;
+    }
+    document.getElementById("expTrapText").innerHTML = trapPhrase;
   },
 
   // 7. 作答反饋判定
@@ -382,20 +392,55 @@ const app = {
     this.showView("view-result");
   },
 
-  // 10. 數字翻牌卡邏輯
-  showFlashcards() {
-    this.state.fcIndex = 0;
-    this.showView("view-flashcards");
+  // 10. 數字翻牌卡邏輯 (支援 60 張卡片 + 進度記憶 + 分類篩選)
+  initFlashcardCategories() {
+    const pillContainer = document.getElementById("fcCategoryPills");
+    if (!pillContainer) return;
+
+    const cats = ["ALL", "技術規則", "無障礙", "都更危老", "建築法", "採購營造", "建築師法", "國土計畫"];
+    let html = "";
+    cats.forEach(c => {
+      const activeClass = c === this.state.fcCategory ? "active" : "";
+      const label = c === "ALL" ? "全部 (記憶進度)" : c;
+      html += `<button class="fc-pill-btn ${activeClass}" onclick="app.setFcCategory('${c}')">${label}</button>`;
+    });
+    pillContainer.innerHTML = html;
+  },
+
+  setFcCategory(cat) {
+    this.state.fcCategory = cat;
+    this.initFlashcardCategories();
+    this.applyFlashcardFilter();
+  },
+
+  applyFlashcardFilter() {
+    if (this.state.fcCategory === "ALL") {
+      this.state.currentCards = [...FLASHCARDS];
+      // 讀取上次記憶進度
+      const savedIdx = localStorage.getItem("ARCH_LAW_LAST_FC_INDEX");
+      let idx = savedIdx !== null ? parseInt(savedIdx, 10) : 0;
+      if (idx >= this.state.currentCards.length || idx < 0) idx = 0;
+      this.state.fcIndex = idx;
+    } else {
+      this.state.currentCards = FLASHCARDS.filter(c => c.cat === this.state.fcCategory);
+      this.state.fcIndex = 0;
+    }
     this.renderFlashcard();
   },
 
+  showFlashcards() {
+    this.applyFlashcardFilter();
+    this.showView("view-flashcards");
+  },
+
   renderFlashcard() {
-    const card = FLASHCARDS[this.state.fcIndex];
-    const total = FLASHCARDS.length;
+    if (!this.state.currentCards || this.state.currentCards.length === 0) return;
+    const card = this.state.currentCards[this.state.fcIndex];
+    const total = this.state.currentCards.length;
     const curr = this.state.fcIndex + 1;
 
     document.getElementById("flashcardCounter").innerText = `${curr} / ${total}`;
-    document.getElementById("fcCatTag").innerText = card.cat;
+    document.getElementById("fcCatTag").innerText = card.cat + " · " + card.topic;
     document.getElementById("fcLawTag").innerText = card.law;
     document.getElementById("fcQuestion").innerText = card.front;
     document.getElementById("fcAnswer").innerText = card.back;
@@ -403,6 +448,11 @@ const app = {
 
     const el = document.getElementById("flashcardElement");
     el.classList.remove("flipped");
+
+    // 若為全部模式，記憶當前進度
+    if (this.state.fcCategory === "ALL") {
+      localStorage.setItem("ARCH_LAW_LAST_FC_INDEX", this.state.fcIndex);
+    }
   },
 
   flipFlashcard() {
@@ -411,7 +461,7 @@ const app = {
   },
 
   nextFlashcard() {
-    if (this.state.fcIndex < FLASHCARDS.length - 1) {
+    if (this.state.fcIndex < this.state.currentCards.length - 1) {
       this.state.fcIndex++;
     } else {
       this.state.fcIndex = 0;
@@ -423,7 +473,7 @@ const app = {
     if (this.state.fcIndex > 0) {
       this.state.fcIndex--;
     } else {
-      this.state.fcIndex = FLASHCARDS.length - 1;
+      this.state.fcIndex = this.state.currentCards.length - 1;
     }
     this.renderFlashcard();
   },
@@ -468,6 +518,7 @@ const app = {
       mistakes: this.state.mistakes,
       lastDate: this.state.lastDate,
       todayAnswered: this.state.todayAnswered,
+      lastFcIndex: this.state.fcIndex,
       timestamp: Date.now()
     };
     const code = btoa(encodeURIComponent(JSON.stringify(data)));
@@ -495,6 +546,10 @@ const app = {
       this.state.mistakes = parsed.mistakes || {};
       this.state.lastDate = parsed.lastDate || "";
       this.state.todayAnswered = parsed.todayAnswered || 0;
+      if (parsed.lastFcIndex !== undefined) {
+        this.state.fcIndex = parsed.lastFcIndex;
+        localStorage.setItem("ARCH_LAW_LAST_FC_INDEX", parsed.lastFcIndex);
+      }
       this.saveState();
       this.renderDashboard();
       this.closeSyncModal();
