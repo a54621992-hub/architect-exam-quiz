@@ -37,7 +37,7 @@ const app = {
     const diffDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
     const badge = document.getElementById("countdownBadge");
     if (badge) {
-      badge.innerHTML = `⏳ 距考期剩 <b>${diffDays}</b> 天`;
+      badge.innerHTML = `⏳ 剩 <b>${diffDays}</b> 天`;
     }
   },
 

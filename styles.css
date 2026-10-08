@@ -55,24 +55,17 @@ header {
 .logo-area {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   cursor: pointer;
-}
-
-.logo-badge {
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-  color: white;
-  font-weight: 800;
-  font-size: 0.85rem;
-  padding: 4px 8px;
-  border-radius: 6px;
-  letter-spacing: 1px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .app-title {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: #fff;
+  white-space: nowrap;
 }
 
 .header-actions {
@@ -80,6 +73,14 @@ header {
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.header-actions .btn-outline {
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .countdown-pill {
@@ -90,9 +91,12 @@ header {
   border-radius: 20px;
   font-size: 0.8rem;
   font-weight: 600;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 /* 主容器 (對齊敷地 APP 手機比例 576px 居中) */
