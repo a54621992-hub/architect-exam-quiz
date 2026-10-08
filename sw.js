@@ -1,12 +1,15 @@
-const CACHE_NAME = 'arch-law-cache-v2.1';
+const CACHE_NAME = 'arch-law-cache-v2.2';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=2.1',
+  './styles.css?v=2.2',
   './app.js?v=2.1',
   './questions.js?v=2.1',
   './flashcards.js?v=2.1',
-  './manifest.json'
+  './manifest.json',
+  './icon-192.png',
+  './icon-512.png',
+  './apple-touch-icon.png'
 ];
 
 self.addEventListener('install', event => {

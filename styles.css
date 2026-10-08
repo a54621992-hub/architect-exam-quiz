@@ -34,18 +34,22 @@ body {
   overflow-x: hidden;
 }
 
-/* 頂部導航列 */
+/* 頂部導航列 (對齊敷地 APP 手機比例 576px 居中) */
 header {
-  background-color: rgba(30, 41, 59, 0.85);
+  background-color: rgba(30, 41, 59, 0.9);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
-  padding: 12px 20px;
+  padding: 12px 16px;
   position: sticky;
   top: 0;
   z-index: 50;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  max-width: 576px;
+  width: 100%;
+  margin: 0 auto;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .logo-area {
@@ -90,13 +94,13 @@ header {
   gap: 4px;
 }
 
-/* 主容器 */
+/* 主容器 (對齊敷地 APP 手機比例 576px 居中) */
 main {
   flex: 1;
-  max-width: 900px;
+  max-width: 576px;
   width: 100%;
   margin: 0 auto;
-  padding: 20px 16px;
+  padding: 16px;
 }
 
 /* 視圖切換 */
