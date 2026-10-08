@@ -18,20 +18,26 @@
   <!-- 頂部導航 -->
   <header>
     <div class="logo-area" onclick="app.showDashboard()">
-      <h1 class="app-title">建築師法規 40天衝刺</h1>
+      <div class="title-group">
+        <span class="app-title-main">建築師法規</span>
+        <span class="app-title-sub">40天衝刺</span>
+      </div>
     </div>
     <div class="header-actions">
       <div class="countdown-pill" id="countdownBadge">
         ⏳ 剩 37 天
       </div>
-      <button class="btn-outline" id="btnInstallApp" style="display: none; padding: 4px 8px; font-size: 0.8rem; color: #38bdf8; border-color: rgba(56,189,248,0.4);" onclick="installPWA()" title="安裝 APP 到桌面">
-        📲 安裝
+      <button class="nav-icon-btn" id="btnInstallApp" style="display: none; border-color: rgba(56,189,248,0.4);" onclick="installPWA()" title="安裝 APP 到桌面">
+        <span class="btn-icon">📲</span>
+        <span class="btn-text" style="color: #38bdf8;">安<br>裝</span>
       </button>
-      <button class="btn-outline" style="padding: 4px 8px; font-size: 0.8rem;" onclick="app.forceRefresh()" title="清快取更新至最新版本">
-        🔄 更新
+      <button class="nav-icon-btn" onclick="app.forceRefresh()" title="清快取更新至最新版本">
+        <span class="btn-icon">🔄</span>
+        <span class="btn-text">更<br>新</span>
       </button>
-      <button class="btn-outline" style="padding: 4px 10px; font-size: 0.8rem;" onclick="app.openSyncModal()">
-        📲 同步
+      <button class="nav-icon-btn" onclick="app.openSyncModal()" title="進度備份與還原">
+        <span class="btn-icon">📲</span>
+        <span class="btn-text">同<br>步</span>
       </button>
     </div>
   </header>
