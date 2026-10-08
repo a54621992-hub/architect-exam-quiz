@@ -13,11 +13,12 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', event => {
-  // 強制立刻啟動新的 Service Worker
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      return cache.addAll(ASSETS);
+    caches.open(CACHE_NAME).then(async cache => {
+      await Promise.allSettled(
+        ASSETS.map(url => cache.add(url).catch(e => console.warn('Cache failed:', url, e)))
+      );
     })
   );
 });

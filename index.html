@@ -25,9 +25,9 @@
       <div class="countdown-pill" id="countdownBadge">
         ⏳ 剩 40 天
       </div>
-      <a href="./site/" class="btn-outline" style="padding: 4px 8px; font-size: 0.8rem; text-decoration: none; color: #34d399; border-color: rgba(52,211,153,0.3);" title="前往敷地計畫與都市設計極速複習">
-        📐 敷地
-      </a>
+      <button class="btn-outline" id="btnInstallApp" style="display: none; padding: 4px 8px; font-size: 0.8rem; color: #38bdf8; border-color: rgba(56,189,248,0.4);" onclick="installPWA()" title="安裝 APP 到桌面">
+        📲 安裝
+      </button>
       <button class="btn-outline" style="padding: 4px 8px; font-size: 0.8rem;" onclick="app.forceRefresh()" title="清快取更新至最新版本">
         🔄 更新
       </button>
@@ -355,13 +355,63 @@
   <script src="flashcards.js?v=2.1"></script>
   <script src="app.js?v=2.1"></script>
 
-  <!-- PWA Service Worker 註冊 -->
+  <!-- PWA Service Worker 與安裝管理 -->
   <script>
+    let deferredPrompt = null;
+    const installBtn = document.getElementById('btnInstallApp');
+
+    // 監聽 Android Chrome PWA 安裝事件
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      if (installBtn) {
+        installBtn.style.display = 'inline-flex';
+      }
+    });
+
+    window.addEventListener('appinstalled', () => {
+      deferredPrompt = null;
+      if (installBtn) installBtn.style.display = 'none';
+      console.log('🎉 PWA 已成功安裝至桌面');
+    });
+
+    function installPWA() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then((choiceResult) => {
+          if (choiceResult.outcome === 'accepted') {
+            console.log('使用者接受安裝');
+          }
+          deferredPrompt = null;
+          if (installBtn) installBtn.style.display = 'none';
+        });
+      } else {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        if (isIOS) {
+          alert("📱 iPhone / iPad 安裝至主畫面：\n請點擊 Safari 底部「分享」按鈕 (帶箭頭方塊) ➔ 往下滑選擇「加入主畫面」即可！");
+        } else {
+          alert("📱 手機 Chrome 安裝至主畫面：\n請點擊瀏覽器右上角選單「⋮」➔ 點選「加到主畫面」或「安裝應用程式」即可！\n(若無此選項，請確認已清除舊快取並重整)");
+        }
+      }
+    }
+
+    // 若非獨立應用模式且為行動端，顯示安裝按鈕
+    if (!window.matchMedia('(display-mode: standalone)').matches) {
+      if (installBtn && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        installBtn.style.display = 'inline-flex';
+      }
+    }
+
+    // 註冊 Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(err => {
-          console.log('SW register failed:', err);
-        });
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
+          .then(reg => {
+            console.log('SW 註冊成功，範圍:', reg.scope);
+          })
+          .catch(err => {
+            console.log('SW 註冊失敗:', err);
+          });
       });
     }
   </script>
