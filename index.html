@@ -63,7 +63,7 @@
             <div class="progress-bar-fill" id="scoreProgressBar" style="width: 0%;"></div>
           </div>
           <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
-            <span>累計刷題：<b id="totalAnsweredCount" style="color: #fff;">0</b> / 800 題</span>
+            <span>累計刷題：<b id="totalAnsweredCount" style="color: #fff;">0</b> / 400 題</span>
             <span>綜合答對率：<b id="overallAccuracy" style="color: #10b981;">0%</b></span>
           </div>
         </div>
@@ -71,13 +71,13 @@
         <div class="dash-card">
           <div class="card-label">
             <span>今日 30 分鐘複習進度</span>
-            <span style="color: #38bdf8; font-weight: 700;" id="todayTaskText">0 / 20 題</span>
+            <span style="color: #38bdf8; font-weight: 700;" id="todayTaskText">0 / 30 題</span>
           </div>
           <div class="progress-bar-bg">
             <div class="progress-bar-fill" id="todayProgressBar" style="width: 0%; background: #38bdf8;"></div>
           </div>
           <p style="font-size: 0.82rem; color: var(--text-muted); margin-top: 12px; line-height: 1.5;">
-            💡 <b>80/20 策略</b>：每天刷 20 題真題 + 5 分鐘錯題消滅，40 天累積刷完 800 題高頻衝刺題庫（400 題歷屆正本 + 400 題高頻模擬），穩拿 60 分保底及格！
+            💡 <b>80/20 策略</b>：10/14～10/27 每天 30 題依年份刷完 110～114 年歷屆 400 題 → 10/28～11/06 錯題＋翻牌卡 → 11/07～11/12 每天一回 20 題迷你模考。
           </p>
         </div>
       </div>
@@ -91,13 +91,13 @@
           <div>
             <div class="action-header">
               <span class="action-icon">⚡</span>
-              <div class="action-title">今日 20 題速刷</div>
+              <div class="action-title">今日 30 題（依年份順刷）</div>
             </div>
             <div class="action-desc">
-              嚴格依五大核心法規佔比智能抽題（34%技術規則、19%都更危老、18%建築法、15%採購營造）。
+              114→110 年歷屆真題依序接續上次進度，14 天刷完 400 題、不漏不重複。
             </div>
           </div>
-          <div class="badge-counter">⏳ 建議用時：15~20 分鐘</div>
+          <div class="badge-counter">⏳ 建議用時：30 分鐘</div>
         </div>
 
         <!-- 錯題大屠殺 -->
@@ -124,7 +124,7 @@
               <div class="action-title">數字速記翻牌卡</div>
             </div>
             <div class="action-desc">
-              專攻罰鍰、年限、天數、坡度比、面積等 60 組法規必考客觀數字題。
+              專攻罰鍰、年限、天數、坡度比、面積等法規必考數字（已逐張對照法條原文校正）。
             </div>
           </div>
           <div class="badge-counter" style="color: #fbbf24;">⚡ 通勤零碎 3 分鐘速記</div>
@@ -142,6 +142,20 @@
             </div>
           </div>
           <div class="badge-counter">🎯 弱項重點突破</div>
+        </div>
+
+        <!-- 20題迷你模考 -->
+        <div class="action-card" onclick="app.startMiniMock()">
+          <div>
+            <div class="action-header">
+              <span class="action-icon">⏲️</span>
+              <div class="action-title">20 題迷你模考</div>
+            </div>
+            <div class="action-desc">
+              限時 30 分鐘，與正式考試同配速（每題 1.5 分鐘）；錯題優先出題。
+            </div>
+          </div>
+          <div class="badge-counter">🎯 每日 30 分鐘可完成</div>
         </div>
 
         <!-- 80題全真模擬考 -->
@@ -356,9 +370,9 @@
   </div>
 
   <!-- 題庫與核心腳本載入 -->
-  <script src="questions.js?v=2.1"></script>
-  <script src="flashcards.js?v=2.1"></script>
-  <script src="app.js?v=2.1"></script>
+  <script src="questions.js?v=2.3"></script>
+  <script src="flashcards.js?v=2.3"></script>
+  <script src="app.js?v=2.3"></script>
 
   <!-- PWA Service Worker 與安裝管理 -->
   <script>

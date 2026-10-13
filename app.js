@@ -1,4 +1,4 @@
-// 建築師法規 40天衝刺刷題系統 - 核心邏輯 (800題 + 60張記憶翻牌卡)
+// 建築師法規衝刺刷題系統 - 核心邏輯 (110~114年歷屆 400 題 + 數字翻牌卡)
 const app = {
   // 狀態
   state: {
@@ -10,7 +10,8 @@ const app = {
     favorites: [], // [qId]
     currentQuiz: [],
     currentIndex: 0,
-    quizMode: "daily", // 'daily', 'mistake', 'category', 'mock', 'favorites'
+    quizMode: "daily", // 'daily', 'mistake', 'category', 'mock', 'mini', 'favorites'
+    seqIndex: 0, // 依年份順序刷題進度指標（114→110）
     hasAnswered: false,
     quizCorrectCount: 0,
     fcIndex: 0,
@@ -53,6 +54,7 @@ const app = {
         this.state.favorites = parsed.favorites || [];
         this.state.lastDate = parsed.lastDate || "";
         this.state.todayAnswered = parsed.todayAnswered || 0;
+        this.state.seqIndex = parsed.seqIndex || 0;
       }
       const savedFcIdx = localStorage.getItem("ARCH_LAW_LAST_FC_INDEX");
       if (savedFcIdx !== null) {
@@ -61,6 +63,13 @@ const app = {
     } catch (e) {
       console.warn("Load state error:", e);
     }
+
+    // 清除題庫已移除題目（如舊版 AI 生成題）殘留之錯題與收藏
+    const validIds = new Set(RAW_QUESTIONS.map(q => q.id));
+    Object.keys(this.state.mistakes).forEach(id => {
+      if (!validIds.has(id)) delete this.state.mistakes[id];
+    });
+    this.state.favorites = (this.state.favorites || []).filter(id => validIds.has(id));
 
     // 檢查每日重置
     const todayStr = new Date().toISOString().split("T")[0];
@@ -79,7 +88,8 @@ const app = {
         mistakes: this.state.mistakes,
         favorites: this.state.favorites,
         lastDate: this.state.lastDate,
-        todayAnswered: this.state.todayAnswered
+        todayAnswered: this.state.todayAnswered,
+        seqIndex: this.state.seqIndex
       };
       localStorage.setItem("ARCH_LAW_EXAM_STATE", JSON.stringify(toSave));
     } catch (e) {
@@ -87,7 +97,7 @@ const app = {
     }
   },
 
-  // 3. 儀表板與及格雷達渲染 (800 題規模)
+  // 3. 儀表板與及格雷達渲染
   renderDashboard() {
     const totalAns = this.state.answeredTotal;
     const totalCorrect = this.state.correctTotal;
@@ -117,7 +127,7 @@ const app = {
     }
 
     // 今日進度
-    const todayTarget = 20;
+    const todayTarget = this.DAILY_COUNT;
     const todayPercent = Math.min(100, (this.state.todayAnswered / todayTarget) * 100);
     const todayTaskEl = document.getElementById("todayTaskText");
     if (this.state.todayAnswered >= todayTarget) {
@@ -157,17 +167,31 @@ const app = {
     this.showView("view-dashboard");
   },
 
-  // 5. 抽題演算法 (800 題規模)
-  // 每日 20 題速刷
+  // 5. 抽題演算法
+  DAILY_COUNT: 30,
+
+  // 依年份順序排列（114→110，同年依題號），確保 400 題全數覆蓋不重複
+  getSequentialOrder() {
+    return [...RAW_QUESTIONS].sort((a, b) => (b.year - a.year) || (a.q_num - b.q_num));
+  },
+
+  // 每日 30 題：依年份順序接續上次進度
   startDailyQuiz() {
     this.stopMockTimer();
     this.state.quizMode = "daily";
     this.state.currentIndex = 0;
     this.state.quizCorrectCount = 0;
 
-    // 從 800 題隨機抽 20 題 (兼顧歷屆與新增題目)
-    const shuffled = [...RAW_QUESTIONS].sort(() => 0.5 - Math.random());
-    this.state.currentQuiz = shuffled.slice(0, 20);
+    const ordered = this.getSequentialOrder();
+    if (this.state.seqIndex >= ordered.length) {
+      if (!confirm("🎉 400 題歷屆真題已全數刷完一輪！是否從 114 年第 1 題重新開始第二輪？（建議改刷「錯題大屠殺」）")) {
+        return;
+      }
+      this.state.seqIndex = 0;
+    }
+    const start = this.state.seqIndex;
+    // 進度指標於每答一題時推進（見 handleAnswer），中途退出不會跳題
+    this.state.currentQuiz = ordered.slice(start, start + this.DAILY_COUNT);
 
     this.showView("view-quiz");
     this.renderQuestion();
@@ -269,6 +293,28 @@ const app = {
     this.renderQuestion();
   },
 
+  // 20 題 30 分鐘迷你模考（與正式考試同配速：每題 1.5 分鐘）
+  startMiniMock() {
+    if (!confirm("即將開始 20 題迷你模考！限時 30 分鐘（正式考試配速每題 1.5 分鐘），錯題優先出題，是否確認開始？")) {
+      return;
+    }
+    this.stopMockTimer();
+    this.state.quizMode = "mini";
+    this.state.currentIndex = 0;
+    this.state.quizCorrectCount = 0;
+
+    // 錯題優先（最多 10 題），其餘由歷屆題隨機補足
+    const mistakeIds = new Set(Object.keys(this.state.mistakes));
+    const mistakeQs = RAW_QUESTIONS.filter(q => mistakeIds.has(q.id)).sort(() => 0.5 - Math.random()).slice(0, 10);
+    const pickedIds = new Set(mistakeQs.map(q => q.id));
+    const others = RAW_QUESTIONS.filter(q => !pickedIds.has(q.id)).sort(() => 0.5 - Math.random()).slice(0, 20 - mistakeQs.length);
+    this.state.currentQuiz = [...mistakeQs, ...others].sort(() => 0.5 - Math.random());
+
+    this.showView("view-quiz");
+    this.startMockTimer(30);
+    this.renderQuestion();
+  },
+
   // 80 題全真模擬考 (120 分鐘限時)
   startMockExam() {
     if (!confirm("即將開始 80 題全真模擬考！測驗時間共 120 分鐘，是否確認開始？")) {
@@ -284,15 +330,14 @@ const app = {
     this.state.currentQuiz = shuffled.slice(0, 80);
 
     this.showView("view-quiz");
-    this.startMockTimer();
+    this.startMockTimer(120);
     this.renderQuestion();
   },
 
   // 計時器邏輯
-  startMockTimer() {
+  startMockTimer(minutes) {
     this.stopMockTimer();
-    // 120 分鐘 = 7200 秒
-    this.state.mockTimeLeft = 120 * 60;
+    this.state.mockTimeLeft = minutes * 60;
     const badge = document.getElementById("mockTimerBadge");
     if (badge) {
       badge.style.display = "inline-flex";
@@ -303,7 +348,7 @@ const app = {
       if (this.state.mockTimeLeft <= 0) {
         this.stopMockTimer();
         if (badge) badge.innerHTML = `⏱️ 00:00`;
-        alert("⏰ 120 分鐘測驗時間到！系統將自動為您交卷結算！");
+        alert(`⏰ ${minutes} 分鐘測驗時間到！系統將自動為您交卷結算！`);
         this.finishQuiz();
       } else {
         if (badge) {
@@ -456,9 +501,12 @@ const app = {
 
     const q = this.state.currentQuiz[this.state.currentIndex];
     const isAllPass = (q.answer === '#');
-    const isCorrect = isAllPass || (selectedKey.toUpperCase() === q.answer.toUpperCase());
+    // accept：考選部更正為多個答案均給分者（如 113_33、114_27 答 B 或 D）
+    const accepted = (q.accept || [q.answer]).map(k => k.toUpperCase());
+    const isCorrect = isAllPass || accepted.includes(selectedKey.toUpperCase());
 
     // 更新累積統計
+    if (this.state.quizMode === "daily") this.state.seqIndex++;
     this.state.answeredTotal++;
     this.state.todayAnswered++;
     if (isCorrect) {
@@ -468,12 +516,15 @@ const app = {
 
     // 更新按鈕樣式
     const selectedBtn = document.getElementById(`optBtn_${selectedKey}`);
-    const correctBtn = q.answer !== '#' ? document.getElementById(`optBtn_${q.answer}`) : null;
 
     if (isAllPass) {
       if (selectedBtn) selectedBtn.classList.add("correct");
     } else if (isCorrect) {
       if (selectedBtn) selectedBtn.classList.add("correct");
+      accepted.forEach(k => {
+        const b = document.getElementById(`optBtn_${k}`);
+        if (b) b.classList.add("correct");
+      });
       // 若在錯題本中答對，增加 streak
       if (this.state.mistakes[q.id]) {
         this.state.mistakes[q.id].streak = (this.state.mistakes[q.id].streak || 0) + 1;
@@ -484,7 +535,10 @@ const app = {
       }
     } else {
       if (selectedBtn) selectedBtn.classList.add("wrong");
-      if (correctBtn) correctBtn.classList.add("correct");
+      accepted.forEach(k => {
+        const b = document.getElementById(`optBtn_${k}`);
+        if (b) b.classList.add("correct");
+      });
       // 記錄錯題
       if (!this.state.mistakes[q.id]) {
         this.state.mistakes[q.id] = { streak: 0, count: 1 };
@@ -548,7 +602,7 @@ const app = {
     this.showView("view-result");
   },
 
-  // 10. 數字翻牌卡邏輯 (支援 60 張卡片 + 進度記憶 + 分類篩選)
+  // 10. 數字翻牌卡邏輯 (支援進度記憶 + 分類篩選)
   initFlashcardCategories() {
     const pillContainer = document.getElementById("fcCategoryPills");
     if (!pillContainer) return;
@@ -697,6 +751,7 @@ const app = {
       lastDate: this.state.lastDate,
       todayAnswered: this.state.todayAnswered,
       lastFcIndex: this.state.fcIndex,
+      seqIndex: this.state.seqIndex,
       timestamp: Date.now()
     };
     const code = btoa(encodeURIComponent(JSON.stringify(data)));
@@ -725,6 +780,7 @@ const app = {
       this.state.favorites = parsed.favorites || [];
       this.state.lastDate = parsed.lastDate || "";
       this.state.todayAnswered = parsed.todayAnswered || 0;
+      this.state.seqIndex = parsed.seqIndex || 0;
       if (parsed.lastFcIndex !== undefined) {
         this.state.fcIndex = parsed.lastFcIndex;
         localStorage.setItem("ARCH_LAW_LAST_FC_INDEX", parsed.lastFcIndex);

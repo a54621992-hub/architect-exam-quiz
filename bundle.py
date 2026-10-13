@@ -30,13 +30,14 @@ with open(os.path.join(base_dir, "app.js"), encoding="utf-8") as f:
 
 # 內嵌 css (使用正則相容帶版本號的引用，如 styles.css?v=2.2)
 import re
-html = re.sub(r'<link rel="stylesheet" href="styles\.css(?:\?v=[^"]*)?">', f"<style>\n{css}\n</style>", html)
+# replacement 一律用 lambda：字串形式會被 re.sub 解析跳脫，JS 字串內的 \n 變成實際換行導致 SyntaxError
+html = re.sub(r'<link rel="stylesheet" href="styles\.css(?:\?v=[^"]*)?">', lambda m: f"<style>\n{css}\n</style>", html)
 
 # 內嵌 js (相容帶版本號的引用)
 bundle_js = f"<script>\n{q_js}\n\n{fc_js}\n\n{app_js}\n</script>"
 html = re.sub(r'<script src="questions\.js(?:\?v=[^"]*)?"></script>', "", html)
 html = re.sub(r'<script src="flashcards\.js(?:\?v=[^"]*)?"></script>', "", html)
-html = re.sub(r'<script src="app\.js(?:\?v=[^"]*)?"></script>', bundle_js, html)
+html = re.sub(r'<script src="app\.js(?:\?v=[^"]*)?"></script>', lambda m: bundle_js, html)
 
 # 寫入目標：首先寫入當前目錄
 bundle_path_local = os.path.join(base_dir, "index_bundle.html")
