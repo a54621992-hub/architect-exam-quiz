@@ -100,6 +100,20 @@
           <div class="badge-counter">⏳ 建議用時：30 分鐘</div>
         </div>
 
+        <!-- 條文命題 -->
+        <div class="action-card" onclick="app.startNlmQuiz()">
+          <div>
+            <div class="action-header">
+              <span class="action-icon">📜</span>
+              <div class="action-title">條文命題 200 題</div>
+            </div>
+            <div class="action-desc">
+              依高頻法規條文出題，每題附條文原句並經程式比對法條原文；不混入真題順刷與模擬考。
+            </div>
+          </div>
+          <div class="badge-counter">📅 建議 10/28 起與錯題交錯練</div>
+        </div>
+
         <!-- 錯題大屠殺 -->
         <div class="action-card hot-border" onclick="app.startMistakeQuiz()">
           <div>
@@ -370,9 +384,10 @@
   </div>
 
   <!-- 題庫與核心腳本載入 -->
-  <script src="questions.js?v=2.3"></script>
-  <script src="flashcards.js?v=2.3"></script>
-  <script src="app.js?v=2.3"></script>
+  <script src="questions.js?v=2.4"></script>
+  <script src="nlm_questions.js?v=2.4"></script>
+  <script src="flashcards.js?v=2.4"></script>
+  <script src="app.js?v=2.4"></script>
 
   <!-- PWA Service Worker 與安裝管理 -->
   <script>

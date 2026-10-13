@@ -1,4 +1,7 @@
 // 建築師法規衝刺刷題系統 - 核心邏輯 (110~114年歷屆 400 題 + 數字翻牌卡)
+// 錯題、收藏查找用：歷屆真題＋條文命題（條文命題不混入每日順刷、專題與模擬考）
+const ALL_QUESTIONS = RAW_QUESTIONS.concat(typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS : []);
+
 const app = {
   // 狀態
   state: {
@@ -12,6 +15,7 @@ const app = {
     currentIndex: 0,
     quizMode: "daily", // 'daily', 'mistake', 'category', 'mock', 'mini', 'favorites'
     seqIndex: 0, // 依年份順序刷題進度指標（114→110）
+    nlmSeqIndex: 0, // 條文命題順刷進度指標
     hasAnswered: false,
     quizCorrectCount: 0,
     fcIndex: 0,
@@ -55,6 +59,7 @@ const app = {
         this.state.lastDate = parsed.lastDate || "";
         this.state.todayAnswered = parsed.todayAnswered || 0;
         this.state.seqIndex = parsed.seqIndex || 0;
+        this.state.nlmSeqIndex = parsed.nlmSeqIndex || 0;
       }
       const savedFcIdx = localStorage.getItem("ARCH_LAW_LAST_FC_INDEX");
       if (savedFcIdx !== null) {
@@ -65,7 +70,7 @@ const app = {
     }
 
     // 清除題庫已移除題目（如舊版 AI 生成題）殘留之錯題與收藏
-    const validIds = new Set(RAW_QUESTIONS.map(q => q.id));
+    const validIds = new Set(ALL_QUESTIONS.map(q => q.id));
     Object.keys(this.state.mistakes).forEach(id => {
       if (!validIds.has(id)) delete this.state.mistakes[id];
     });
@@ -89,7 +94,8 @@ const app = {
         favorites: this.state.favorites,
         lastDate: this.state.lastDate,
         todayAnswered: this.state.todayAnswered,
-        seqIndex: this.state.seqIndex
+        seqIndex: this.state.seqIndex,
+        nlmSeqIndex: this.state.nlmSeqIndex
       };
       localStorage.setItem("ARCH_LAW_EXAM_STATE", JSON.stringify(toSave));
     } catch (e) {
@@ -197,6 +203,30 @@ const app = {
     this.renderQuestion();
   },
 
+  // 條文命題：每回 20 題，依題號接續上次進度
+  startNlmQuiz() {
+    this.stopMockTimer();
+    const list = typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS : [];
+    if (list.length === 0) {
+      alert("條文命題題庫尚未載入！");
+      return;
+    }
+    if (this.state.nlmSeqIndex >= list.length) {
+      if (!confirm(`🎉 ${list.length} 題條文命題已全數刷完一輪！是否從第 1 題重新開始？`)) {
+        return;
+      }
+      this.state.nlmSeqIndex = 0;
+    }
+    this.state.quizMode = "nlm";
+    this.state.currentIndex = 0;
+    this.state.quizCorrectCount = 0;
+    const start = this.state.nlmSeqIndex;
+    this.state.currentQuiz = list.slice(start, start + 20);
+
+    this.showView("view-quiz");
+    this.renderQuestion();
+  },
+
   // 錯題大屠殺
   startMistakeQuiz() {
     this.stopMockTimer();
@@ -211,7 +241,7 @@ const app = {
     this.state.quizCorrectCount = 0;
 
     // 篩選錯題
-    const filtered = RAW_QUESTIONS.filter(q => mistakeIds.includes(q.id));
+    const filtered = ALL_QUESTIONS.filter(q => mistakeIds.includes(q.id));
     this.state.currentQuiz = filtered.sort(() => 0.5 - Math.random()).slice(0, 20);
 
     this.showView("view-quiz");
@@ -232,7 +262,7 @@ const app = {
     this.state.quizCorrectCount = 0;
 
     // 篩選收藏題目
-    const filtered = RAW_QUESTIONS.filter(q => favIds.includes(q.id));
+    const filtered = ALL_QUESTIONS.filter(q => favIds.includes(q.id));
     this.state.currentQuiz = filtered.sort(() => 0.5 - Math.random());
 
     this.showView("view-quiz");
@@ -305,7 +335,7 @@ const app = {
 
     // 錯題優先（最多 10 題），其餘由歷屆題隨機補足
     const mistakeIds = new Set(Object.keys(this.state.mistakes));
-    const mistakeQs = RAW_QUESTIONS.filter(q => mistakeIds.has(q.id)).sort(() => 0.5 - Math.random()).slice(0, 10);
+    const mistakeQs = ALL_QUESTIONS.filter(q => mistakeIds.has(q.id)).sort(() => 0.5 - Math.random()).slice(0, 10);
     const pickedIds = new Set(mistakeQs.map(q => q.id));
     const others = RAW_QUESTIONS.filter(q => !pickedIds.has(q.id)).sort(() => 0.5 - Math.random()).slice(0, 20 - mistakeQs.length);
     this.state.currentQuiz = [...mistakeQs, ...others].sort(() => 0.5 - Math.random());
@@ -424,7 +454,7 @@ const app = {
     document.getElementById("quizCatTag").innerText = q.cat_name || "營建法規";
     
     // 來源與年份標籤
-    let sourceLabel = `${q.year}年 第${q.q_num}題`;
+    let sourceLabel = q.year ? `${q.year}年 第${q.q_num}題` : `第${q.q_num}題`;
     if (q.source_type) {
       sourceLabel = `[${q.source_type}] ${sourceLabel}`;
     }
@@ -507,6 +537,7 @@ const app = {
 
     // 更新累積統計
     if (this.state.quizMode === "daily") this.state.seqIndex++;
+    if (this.state.quizMode === "nlm") this.state.nlmSeqIndex++;
     this.state.answeredTotal++;
     this.state.todayAnswered++;
     if (isCorrect) {
@@ -752,6 +783,7 @@ const app = {
       todayAnswered: this.state.todayAnswered,
       lastFcIndex: this.state.fcIndex,
       seqIndex: this.state.seqIndex,
+      nlmSeqIndex: this.state.nlmSeqIndex,
       timestamp: Date.now()
     };
     const code = btoa(encodeURIComponent(JSON.stringify(data)));
@@ -781,6 +813,7 @@ const app = {
       this.state.lastDate = parsed.lastDate || "";
       this.state.todayAnswered = parsed.todayAnswered || 0;
       this.state.seqIndex = parsed.seqIndex || 0;
+      this.state.nlmSeqIndex = parsed.nlmSeqIndex || 0;
       if (parsed.lastFcIndex !== undefined) {
         this.state.fcIndex = parsed.lastFcIndex;
         localStorage.setItem("ARCH_LAW_LAST_FC_INDEX", parsed.lastFcIndex);

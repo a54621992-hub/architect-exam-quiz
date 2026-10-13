@@ -22,6 +22,9 @@ with open(os.path.join(base_dir, "styles.css"), encoding="utf-8") as f:
 with open(os.path.join(base_dir, "questions.js"), encoding="utf-8") as f:
     q_js = f.read()
 
+with open(os.path.join(base_dir, "nlm_questions.js"), encoding="utf-8") as f:
+    nlm_js = f.read()
+
 with open(os.path.join(base_dir, "flashcards.js"), encoding="utf-8") as f:
     fc_js = f.read()
 
@@ -34,8 +37,9 @@ import re
 html = re.sub(r'<link rel="stylesheet" href="styles\.css(?:\?v=[^"]*)?">', lambda m: f"<style>\n{css}\n</style>", html)
 
 # 內嵌 js (相容帶版本號的引用)
-bundle_js = f"<script>\n{q_js}\n\n{fc_js}\n\n{app_js}\n</script>"
+bundle_js = f"<script>\n{q_js}\n\n{nlm_js}\n\n{fc_js}\n\n{app_js}\n</script>"
 html = re.sub(r'<script src="questions\.js(?:\?v=[^"]*)?"></script>', "", html)
+html = re.sub(r'<script src="nlm_questions\.js(?:\?v=[^"]*)?"></script>', "", html)
 html = re.sub(r'<script src="flashcards\.js(?:\?v=[^"]*)?"></script>', "", html)
 html = re.sub(r'<script src="app\.js(?:\?v=[^"]*)?"></script>', lambda m: bundle_js, html)
 
