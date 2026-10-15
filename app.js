@@ -1,4 +1,4 @@
-// 建築師法規衝刺刷題系統 - 核心邏輯 (110~114年歷屆 400 題 + 數字翻牌卡)
+// 建築師法規衝刺刷題系統 - 核心邏輯 v2.5 (110~114年歷屆 400 題 + 條文命題 200 題 + 數字翻牌卡 59 張)
 // 錯題、收藏查找用：歷屆真題＋條文命題（條文命題不混入每日順刷、專題與模擬考）
 const ALL_QUESTIONS = RAW_QUESTIONS.concat(typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS : []);
 
@@ -13,9 +13,12 @@ const app = {
     favorites: [], // [qId]
     currentQuiz: [],
     currentIndex: 0,
-    quizMode: "daily", // 'daily', 'mistake', 'category', 'mock', 'mini', 'favorites'
+    quizMode: "daily", // 'daily', 'nlm', 'mistake', 'category', 'mock', 'mini', 'favorites'
+    currentCatId: "",
     seqIndex: 0, // 依年份順序刷題進度指標（114→110）
     nlmSeqIndex: 0, // 條文命題順刷進度指標
+    shuffleOptions: false, // 選項隨機洗牌開關
+    currentOptMap: { A: "A", B: "B", C: "C", D: "D" }, // 顯示選項 -> 原始選項映射
     hasAnswered: false,
     quizCorrectCount: 0,
     fcIndex: 0,
@@ -25,6 +28,12 @@ const app = {
     mockTimerId: null
   },
 
+  // 取得台灣本地日期字串 (UTC+8)，確保午夜 00:00 準時重置每日進度
+  getLocalDateStr() {
+    const twTime = new Date(Date.now() + 8 * 3600 * 1000);
+    return twTime.toISOString().split("T")[0];
+  },
+
   init() {
     this.loadState();
     this.updateCountdown();
@@ -32,11 +41,12 @@ const app = {
     this.bindKeyboard();
     this.renderCategoryList();
     this.initFlashcardCategories();
+    this.updateShuffleButton();
   },
 
   // 1. 考期倒數 (目標: 2026/11/14)
   updateCountdown() {
-    const targetDate = new Date("2026-11-14T08:00:00");
+    const targetDate = new Date("2026-11-14T08:00:00+08:00");
     const today = new Date();
     const diffTime = targetDate - today;
     const diffDays = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
@@ -60,6 +70,7 @@ const app = {
         this.state.todayAnswered = parsed.todayAnswered || 0;
         this.state.seqIndex = parsed.seqIndex || 0;
         this.state.nlmSeqIndex = parsed.nlmSeqIndex || 0;
+        this.state.shuffleOptions = Boolean(parsed.shuffleOptions);
       }
       const savedFcIdx = localStorage.getItem("ARCH_LAW_LAST_FC_INDEX");
       if (savedFcIdx !== null) {
@@ -69,15 +80,15 @@ const app = {
       console.warn("Load state error:", e);
     }
 
-    // 清除題庫已移除題目（如舊版 AI 生成題）殘留之錯題與收藏
+    // 清除題庫已移除題目殘留之錯題與收藏
     const validIds = new Set(ALL_QUESTIONS.map(q => q.id));
     Object.keys(this.state.mistakes).forEach(id => {
       if (!validIds.has(id)) delete this.state.mistakes[id];
     });
     this.state.favorites = (this.state.favorites || []).filter(id => validIds.has(id));
 
-    // 檢查每日重置
-    const todayStr = new Date().toISOString().split("T")[0];
+    // 檢查每日重置 (以台灣時間 UTC+8 午夜為準)
+    const todayStr = this.getLocalDateStr();
     if (this.state.lastDate !== todayStr) {
       this.state.todayAnswered = 0;
       this.state.lastDate = todayStr;
@@ -95,7 +106,8 @@ const app = {
         lastDate: this.state.lastDate,
         todayAnswered: this.state.todayAnswered,
         seqIndex: this.state.seqIndex,
-        nlmSeqIndex: this.state.nlmSeqIndex
+        nlmSeqIndex: this.state.nlmSeqIndex,
+        shuffleOptions: this.state.shuffleOptions
       };
       localStorage.setItem("ARCH_LAW_EXAM_STATE", JSON.stringify(toSave));
     } catch (e) {
@@ -113,6 +125,12 @@ const app = {
     document.getElementById("totalAnsweredCount").innerText = totalAns;
     document.getElementById("overallAccuracy").innerText = acc.toFixed(0) + "%";
     document.getElementById("estimatedScore").innerText = estimatedScore;
+
+    const seqEl = document.getElementById("seqProgressCount");
+    if (seqEl) seqEl.innerText = Math.min(this.state.seqIndex, RAW_QUESTIONS.length);
+    const nlmEl = document.getElementById("nlmProgressCount");
+    const nlmTotal = typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS.length : 200;
+    if (nlmEl) nlmEl.innerText = Math.min(this.state.nlmSeqIndex, nlmTotal);
 
     const progressFill = document.getElementById("scoreProgressBar");
     const indicator = document.getElementById("passStatusIndicator");
@@ -173,6 +191,18 @@ const app = {
     this.showView("view-dashboard");
   },
 
+  // 依當前模式再刷一輪
+  repeatCurrentMode() {
+    const mode = this.state.quizMode;
+    if (mode === "nlm") return this.startNlmQuiz();
+    if (mode === "mistake") return this.startMistakeQuiz();
+    if (mode === "favorites") return this.startFavoritesQuiz();
+    if (mode === "category" && this.state.currentCatId) return this.startCategoryQuiz(this.state.currentCatId);
+    if (mode === "mini") return this.startMiniMock();
+    if (mode === "mock") return this.startMockExam();
+    return this.startDailyQuiz();
+  },
+
   // 5. 抽題演算法
   DAILY_COUNT: 30,
 
@@ -194,9 +224,9 @@ const app = {
         return;
       }
       this.state.seqIndex = 0;
+      this.saveState();
     }
     const start = this.state.seqIndex;
-    // 進度指標於每答一題時推進（見 handleAnswer），中途退出不會跳題
     this.state.currentQuiz = ordered.slice(start, start + this.DAILY_COUNT);
 
     this.showView("view-quiz");
@@ -216,6 +246,7 @@ const app = {
         return;
       }
       this.state.nlmSeqIndex = 0;
+      this.saveState();
     }
     this.state.quizMode = "nlm";
     this.state.currentIndex = 0;
@@ -240,7 +271,6 @@ const app = {
     this.state.currentIndex = 0;
     this.state.quizCorrectCount = 0;
 
-    // 篩選錯題
     const filtered = ALL_QUESTIONS.filter(q => mistakeIds.includes(q.id));
     this.state.currentQuiz = filtered.sort(() => 0.5 - Math.random()).slice(0, 20);
 
@@ -261,7 +291,6 @@ const app = {
     this.state.currentIndex = 0;
     this.state.quizCorrectCount = 0;
 
-    // 篩選收藏題目
     const filtered = ALL_QUESTIONS.filter(q => favIds.includes(q.id));
     this.state.currentQuiz = filtered.sort(() => 0.5 - Math.random());
 
@@ -274,11 +303,27 @@ const app = {
     const container = document.getElementById("categoryListContainer");
     if (!container) return;
 
-    // 統計各考點題目數
+    const catDescMap = {
+      "CAT01": "建築技術規則（設計施工編：防火、避難、特定建築物）",
+      "CAT02": "都市更新條例、危老重建條例、都市計畫法",
+      "CAT03": "建築法（執照申請、施工勘驗、使用管理、罰則）",
+      "CAT04": "政府採購法、營造業法、公共工程管理",
+      "CAT05": "建築物無障礙設施設計規範、身心障礙者權益保障",
+      "CAT06": "建築師法、專業倫理與簽證責任",
+      "CAT07": "國土計畫法、區域計畫法、非都市土地使用管制",
+      "CAT08": "綠建築基準、智慧建築、建築能效與基地保水",
+      "CAT09": "文化資產保存法、古蹟歷史建築紀念建築修復再利用",
+      "CAT10": "山坡地建築管理、公寓大廈管理條例、室內裝修管理"
+    };
+
     const catMap = {};
     RAW_QUESTIONS.forEach(q => {
       if (!catMap[q.cat_id]) {
-        catMap[q.cat_id] = { name: q.cat_name, law: q.law, count: 0 };
+        catMap[q.cat_id] = {
+          name: q.cat_name,
+          desc: catDescMap[q.cat_id] || (q.law ? q.law.split("§")[0] : "營建法規"),
+          count: 0
+        };
       }
       catMap[q.cat_id].count++;
     });
@@ -288,12 +333,12 @@ const app = {
       const item = catMap[catId];
       html += `
         <div class="action-card" style="padding: 12px 16px; margin: 0;" onclick="app.startCategoryQuiz('${catId}')">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px;">
             <div>
               <b style="color: #60a5fa;">${item.name}</b>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">${item.law}</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 2px;">${item.desc}</div>
             </div>
-            <span class="cat-pill">${item.count} 題</span>
+            <span class="cat-pill" style="flex-shrink: 0;">${item.count} 題</span>
           </div>
         </div>
       `;
@@ -313,6 +358,7 @@ const app = {
     this.stopMockTimer();
     this.closeCategoryModal();
     this.state.quizMode = "category";
+    this.state.currentCatId = catId;
     this.state.currentIndex = 0;
     this.state.quizCorrectCount = 0;
 
@@ -333,7 +379,6 @@ const app = {
     this.state.currentIndex = 0;
     this.state.quizCorrectCount = 0;
 
-    // 錯題優先（最多 10 題），其餘由歷屆題隨機補足
     const mistakeIds = new Set(Object.keys(this.state.mistakes));
     const mistakeQs = ALL_QUESTIONS.filter(q => mistakeIds.has(q.id)).sort(() => 0.5 - Math.random()).slice(0, 10);
     const pickedIds = new Set(mistakeQs.map(q => q.id));
@@ -355,7 +400,6 @@ const app = {
     this.state.currentIndex = 0;
     this.state.quizCorrectCount = 0;
 
-    // 抽 80 題
     const shuffled = [...RAW_QUESTIONS].sort(() => 0.5 - Math.random());
     this.state.currentQuiz = shuffled.slice(0, 80);
 
@@ -405,6 +449,34 @@ const app = {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   },
 
+  // 選項隨機洗牌開關
+  toggleOptionShuffle() {
+    this.state.shuffleOptions = !this.state.shuffleOptions;
+    this.saveState();
+    this.updateShuffleButton();
+    if (!this.state.hasAnswered && this.state.currentQuiz.length > 0) {
+      this.renderQuestion();
+    }
+  },
+
+  updateShuffleButton() {
+    const btn = document.getElementById("btnShuffleOpt");
+    if (!btn) return;
+    if (this.state.shuffleOptions) {
+      btn.innerHTML = "🔀 洗牌: 開";
+      btn.style.background = "rgba(56, 189, 248, 0.2)";
+      btn.style.color = "#38bdf8";
+      btn.style.borderColor = "#38bdf8";
+      btn.style.fontWeight = "bold";
+    } else {
+      btn.innerHTML = "🔀 洗牌: 關";
+      btn.style.background = "transparent";
+      btn.style.color = "#94a3b8";
+      btn.style.borderColor = "#475569";
+      btn.style.fontWeight = "normal";
+    }
+  },
+
   // 收藏功能邏輯
   toggleFavorite() {
     const q = this.state.currentQuiz[this.state.currentIndex];
@@ -443,6 +515,15 @@ const app = {
     }
   },
 
+  // HTML 跳脫輔助
+  escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  },
+
   // 6. 渲染當前題目
   renderQuestion() {
     this.state.hasAnswered = false;
@@ -452,8 +533,7 @@ const app = {
 
     document.getElementById("quizProgressNum").innerText = `${curr} / ${total}`;
     document.getElementById("quizCatTag").innerText = q.cat_name || "營建法規";
-    
-    // 來源與年份標籤
+
     let sourceLabel = q.year ? `${q.year}年 第${q.q_num}題` : `第${q.q_num}題`;
     if (q.source_type) {
       sourceLabel = `[${q.source_type}] ${sourceLabel}`;
@@ -466,33 +546,46 @@ const app = {
     const hotTag = document.getElementById("quizHotTag");
     hotTag.style.display = q.is_hot ? "inline-block" : "none";
 
-    // 模擬考計時器 Badge 控制
+    // 模擬考與迷你模考計時器 Badge 控制 (修正 mini 模式計時器隱藏問題)
     const timerBadge = document.getElementById("mockTimerBadge");
     if (timerBadge) {
-      timerBadge.style.display = this.state.quizMode === "mock" ? "inline-flex" : "none";
+      timerBadge.style.display = (this.state.quizMode === "mock" || this.state.quizMode === "mini") ? "inline-flex" : "none";
     }
 
     document.getElementById("quizQuestionText").innerText = q.stem;
 
-    // 更新收藏按鈕狀態 (防禦性呼叫)
-    if (typeof this.updateFavoriteButton === "function") {
-      this.updateFavoriteButton();
+    this.updateFavoriteButton();
+    this.updateShuffleButton();
+
+    // 建立選項映射 (支援選項隨機洗牌)
+    const keys = ["A", "B", "C", "D"];
+    let origKeys = [...keys];
+    if (this.state.shuffleOptions) {
+      for (let i = origKeys.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [origKeys[i], origKeys[j]] = [origKeys[j], origKeys[i]];
+      }
     }
+    this.state.currentOptMap = {};
+    keys.forEach((dispK, idx) => {
+      this.state.currentOptMap[dispK] = origKeys[idx];
+    });
 
     // 選項渲染
     const optList = document.getElementById("quizOptionsList");
     optList.innerHTML = "";
 
-    const keys = ["A", "B", "C", "D"];
-    keys.forEach((k) => {
-      const text = (q.options && q.options[k]) ? q.options[k] : "";
+    keys.forEach((dispK) => {
+      const origK = this.state.currentOptMap[dispK];
+      const text = (q.options && q.options[origK]) ? q.options[origK] : "";
       const btn = document.createElement("button");
       btn.className = "option-btn";
-      btn.id = `optBtn_${k}`;
-      btn.onclick = () => this.handleAnswer(k);
+      btn.id = `optBtn_${dispK}`;
+      btn.dataset.origKey = origK;
+      btn.onclick = () => this.handleAnswer(dispK);
       btn.innerHTML = `
-        <span class="opt-letter">${k}</span>
-        <span style="flex: 1;">${text}</span>
+        <span class="opt-letter">${dispK}</span>
+        <span class="opt-text-body" style="flex: 1;">${this.escapeHtml(text)}</span>
       `;
       optList.appendChild(btn);
     });
@@ -502,18 +595,33 @@ const app = {
     expCard.classList.remove("show");
     document.getElementById("btnNextQuestion").disabled = true;
 
-    // 預設解析內容
+    // 預設解析內容 (三層結構化排版：核心記憶 / 詳解判析 / 法條原文)
     document.getElementById("expLawRef").innerText = q.law || "相關法規綜合條文";
-    
-    // 秒殺關鍵字與解析
-    let keyPhrase = q.explanation ? q.explanation : `正確解答為 (${q.answer})。`;
+
+    let rawExp = q.explanation ? q.explanation : `正確解答為 (${q.answer})。`;
     if (q.answer === '#') {
-      keyPhrase = q.explanation || "<b>【考選部官方公告】</b>：本題考選部官方公告全體一律給分（代號 #）。因法規適用爭議或題幹選項疑義，全部選項均核計分數。";
+      rawExp = q.explanation || "【考選部官方公告】：本題考選部官方公告全體一律給分（代號 #）。因法規適用爭議或題幹選項疑義，全部選項均核計分數。";
     }
+
+    let detailPart = rawExp;
+    let quotePart = "";
+    if (rawExp.includes("【條文原句】")) {
+      const parts = rawExp.split("【條文原句】");
+      detailPart = parts[0].trim();
+      quotePart = parts.slice(1).join("【條文原句】").trim();
+    }
+
+    let expHtml = "";
     if (q.analysis_key) {
-      keyPhrase = `<div style="margin-bottom: 6px;"><b style="color: #fbbf24;">【核心記憶 / 正確數值】</b>：<span style="color: #fef08a;">${q.analysis_key}</span></div>${keyPhrase}`;
+      expHtml += `<div class="exp-key-box"><b>💡 【核心記憶 / 秒殺判準】</b>：${this.escapeHtml(q.analysis_key)}</div>`;
     }
-    document.getElementById("expKeyText").innerHTML = keyPhrase;
+    expHtml += `<div class="exp-detail-box"><b>📝 【詳解與選項判析】</b>：
+${this.escapeHtml(detailPart)}</div>`;
+    if (quotePart) {
+      expHtml += `<div class="exp-quote-box"><b>📜 【法條原文對照】</b>：
+${this.escapeHtml(quotePart)}</div>`;
+    }
+    document.getElementById("expKeyText").innerHTML = expHtml;
 
     let trapPhrase = `注意題幹是問「何者錯誤」還是「何者正確」；小心『得』與『應』之法律效果差異。`;
     if (q.answer === '#') {
@@ -525,15 +633,15 @@ const app = {
   },
 
   // 7. 作答反饋判定
-  handleAnswer(selectedKey) {
+  handleAnswer(selectedDispKey) {
     if (this.state.hasAnswered) return;
     this.state.hasAnswered = true;
 
     const q = this.state.currentQuiz[this.state.currentIndex];
+    const selectedOrigKey = (this.state.currentOptMap && this.state.currentOptMap[selectedDispKey]) || selectedDispKey;
     const isAllPass = (q.answer === '#');
-    // accept：考選部更正為多個答案均給分者（如 113_33、114_27 答 B 或 D）
-    const accepted = (q.accept || [q.answer]).map(k => k.toUpperCase());
-    const isCorrect = isAllPass || accepted.includes(selectedKey.toUpperCase());
+    const acceptedOrig = (q.accept || [q.answer]).map(k => k.toUpperCase());
+    const isCorrect = isAllPass || acceptedOrig.includes(selectedOrigKey.toUpperCase());
 
     // 更新累積統計
     if (this.state.quizMode === "daily") this.state.seqIndex++;
@@ -545,38 +653,51 @@ const app = {
       this.state.quizCorrectCount++;
     }
 
-    // 更新按鈕樣式
-    const selectedBtn = document.getElementById(`optBtn_${selectedKey}`);
+    // 找出所有對應正解的顯示按鈕
+    const keys = ["A", "B", "C", "D"];
+    const acceptedDispKeys = keys.filter(dk => acceptedOrig.includes((this.state.currentOptMap[dk] || dk).toUpperCase()));
+    const selectedBtn = document.getElementById(`optBtn_${selectedDispKey}`);
 
     if (isAllPass) {
       if (selectedBtn) selectedBtn.classList.add("correct");
     } else if (isCorrect) {
       if (selectedBtn) selectedBtn.classList.add("correct");
-      accepted.forEach(k => {
-        const b = document.getElementById(`optBtn_${k}`);
+      acceptedDispKeys.forEach(dk => {
+        const b = document.getElementById(`optBtn_${dk}`);
         if (b) b.classList.add("correct");
       });
-      // 若在錯題本中答對，增加 streak
       if (this.state.mistakes[q.id]) {
         this.state.mistakes[q.id].streak = (this.state.mistakes[q.id].streak || 0) + 1;
-        // 連對 2 次消滅出庫
         if (this.state.mistakes[q.id].streak >= 2) {
           delete this.state.mistakes[q.id];
         }
       }
     } else {
       if (selectedBtn) selectedBtn.classList.add("wrong");
-      accepted.forEach(k => {
-        const b = document.getElementById(`optBtn_${k}`);
+      acceptedDispKeys.forEach(dk => {
+        const b = document.getElementById(`optBtn_${dk}`);
         if (b) b.classList.add("correct");
       });
-      // 記錄錯題
       if (!this.state.mistakes[q.id]) {
         this.state.mistakes[q.id] = { streak: 0, count: 1 };
       } else {
         this.state.mistakes[q.id].streak = 0;
         this.state.mistakes[q.id].count++;
       }
+    }
+
+    // 若啟用選項洗牌，作答後顯示 [原X] 標記，方便對照詳解中的 (A)(B)(C)(D)
+    if (this.state.shuffleOptions) {
+      keys.forEach(dk => {
+        const origK = this.state.currentOptMap[dk];
+        const btn = document.getElementById(`optBtn_${dk}`);
+        if (btn) {
+          const textBody = btn.querySelector(".opt-text-body");
+          if (textBody && !textBody.querySelector(".orig-opt-tag")) {
+            textBody.innerHTML = `<span class="orig-opt-tag">原${origK}</span>` + textBody.innerHTML;
+          }
+        }
+      });
     }
 
     // 禁用所有按鈕點擊，未選中的按鈕半透明
@@ -657,7 +778,6 @@ const app = {
   applyFlashcardFilter() {
     if (this.state.fcCategory === "ALL") {
       this.state.currentCards = [...FLASHCARDS];
-      // 讀取上次記憶進度
       const savedIdx = localStorage.getItem("ARCH_LAW_LAST_FC_INDEX");
       let idx = savedIdx !== null ? parseInt(savedIdx, 10) : 0;
       if (idx >= this.state.currentCards.length || idx < 0) idx = 0;
@@ -691,7 +811,6 @@ const app = {
     const el = document.getElementById("flashcardElement");
     el.classList.remove("flipped");
 
-    // 若為全部模式，記憶當前進度
     if (this.state.fcCategory === "ALL") {
       localStorage.setItem("ARCH_LAW_LAST_FC_INDEX", this.state.fcIndex);
     }
@@ -726,7 +845,6 @@ const app = {
       const activeView = document.querySelector(".view-section.active");
       if (!activeView) return;
 
-      // 刷題視圖快捷鍵
       if (activeView.id === "view-quiz") {
         const key = e.key.toUpperCase();
         if (["1", "2", "3", "4", "A", "B", "C", "D"].includes(key)) {
@@ -743,13 +861,9 @@ const app = {
             this.nextQuestion();
           }
         } else if (key === "S" || key === "F") {
-          // 快捷鍵 S 或 F 收藏/取消收藏
           this.toggleFavorite();
         }
-      }
-      
-      // 翻牌卡視圖快捷鍵
-      else if (activeView.id === "view-flashcards") {
+      } else if (activeView.id === "view-flashcards") {
         if (e.code === "Space" || e.code === "Enter") {
           e.preventDefault();
           this.flipFlashcard();
@@ -784,6 +898,7 @@ const app = {
       lastFcIndex: this.state.fcIndex,
       seqIndex: this.state.seqIndex,
       nlmSeqIndex: this.state.nlmSeqIndex,
+      shuffleOptions: this.state.shuffleOptions,
       timestamp: Date.now()
     };
     const code = btoa(encodeURIComponent(JSON.stringify(data)));
@@ -814,12 +929,16 @@ const app = {
       this.state.todayAnswered = parsed.todayAnswered || 0;
       this.state.seqIndex = parsed.seqIndex || 0;
       this.state.nlmSeqIndex = parsed.nlmSeqIndex || 0;
+      if (parsed.shuffleOptions !== undefined) {
+        this.state.shuffleOptions = Boolean(parsed.shuffleOptions);
+      }
       if (parsed.lastFcIndex !== undefined) {
         this.state.fcIndex = parsed.lastFcIndex;
         localStorage.setItem("ARCH_LAW_LAST_FC_INDEX", parsed.lastFcIndex);
       }
       this.saveState();
       this.renderDashboard();
+      this.updateShuffleButton();
       this.closeSyncModal();
       alert("🎉 進度同步還原成功！所有答題、收藏與錯題紀錄已更新！");
     } catch (e) {
@@ -827,7 +946,7 @@ const app = {
     }
   },
 
-  // 14. 強制清空快取更新版本
+  // 13. 強制清空快取更新版本
   forceRefresh() {
     if (!confirm("確定要強制檢查並更新至最新題庫與小卡版本嗎？（您的答題紀錄將妥善保留）")) {
       return;

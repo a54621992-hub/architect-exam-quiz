@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>建築師法規 40天衝刺刷題系統</title>
-  <link rel="stylesheet" href="styles.css?v=2.2">
+  <link rel="stylesheet" href="styles.css?v=2.5">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -63,8 +63,12 @@
             <div class="progress-bar-fill" id="scoreProgressBar" style="width: 0%;"></div>
           </div>
           <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">
-            <span>累計刷題：<b id="totalAnsweredCount" style="color: #fff;">0</b> / 400 題</span>
+            <span>累計作答：<b id="totalAnsweredCount" style="color: #fff;">0</b> 次</span>
             <span>綜合答對率：<b id="overallAccuracy" style="color: #10b981;">0%</b></span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.1);">
+            <span>歷屆順刷：<b id="seqProgressCount" style="color: #60a5fa;">0</b> / 400 題</span>
+            <span>條文順刷：<b id="nlmProgressCount" style="color: #38bdf8;">0</b> / 200 題</span>
           </div>
         </div>
 
@@ -217,6 +221,9 @@
           <button class="btn-outline" style="padding: 2px 8px; font-size: 0.75rem; border-color: #fbbf24; color: #fbbf24;" id="btnBookmark" onclick="app.toggleFavorite()">
             ☆ 收藏
           </button>
+          <button class="btn-outline" style="padding: 2px 8px; font-size: 0.75rem; border-color: #38bdf8; color: #38bdf8;" id="btnShuffleOpt" onclick="app.toggleOptionShuffle()" title="隨機打亂選項順序，消除位置與長度記憶">
+            🔀 洗牌: 關
+          </button>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <div class="countdown-pill" id="mockTimerBadge" style="display: none; border-color: #ef4444; color: #f87171; background: rgba(239, 68, 68, 0.15); font-weight: 700; font-size: 0.85rem; padding: 2px 8px;">
@@ -237,14 +244,14 @@
           <!-- 選項按鈕由 JS 動態生成 -->
         </div>
 
-        <!-- 三秒秒殺解析卡片 -->
+        <!-- 三層結構化解析卡片 -->
         <div class="explanation-card" id="quizExplanationCard">
           <div class="exp-header">
             <span>🎯 解析與法規依據</span>
             <span style="margin-left: auto; font-size: 0.8rem; color: #a7f3d0;" id="expLawRef">建築法§9</span>
           </div>
-          <div class="exp-row">
-            <b>【秒殺關鍵】</b>：<span id="expKeyText" class="exp-highlight">關鍵字</span>
+          <div class="exp-row" id="expKeyText">
+            關鍵字
           </div>
           <div class="exp-trap" id="expTrapBox">
             ⚠️ <b>考選部常見陷阱</b>：<span id="expTrapText">小心得與應對調</span>
@@ -343,7 +350,7 @@
 
         <div style="display: flex; justify-content: center; gap: 12px;">
           <button class="btn-outline" onclick="app.showDashboard()">返回首頁</button>
-          <button class="btn-primary" onclick="app.startDailyQuiz()">再刷一輪 →</button>
+          <button class="btn-primary" id="btnRepeatQuiz" onclick="app.repeatCurrentMode()">再刷一輪 →</button>
         </div>
       </div>
     </section>
@@ -384,10 +391,10 @@
   </div>
 
   <!-- 題庫與核心腳本載入 -->
-  <script src="questions.js?v=2.4"></script>
-  <script src="nlm_questions.js?v=2.4"></script>
-  <script src="flashcards.js?v=2.4"></script>
-  <script src="app.js?v=2.4"></script>
+  <script src="questions.js?v=2.5"></script>
+  <script src="nlm_questions.js?v=2.5"></script>
+  <script src="flashcards.js?v=2.5"></script>
+  <script src="app.js?v=2.5"></script>
 
   <!-- PWA Service Worker 與安裝管理 -->
   <script>
