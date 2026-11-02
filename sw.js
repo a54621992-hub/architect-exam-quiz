@@ -1,4 +1,4 @@
-const CACHE_NAME = 'arch-law-cache-v2.5';
+const CACHE_NAME = 'arch-law-cache-v2.7';
 const ASSETS = [
   './',
   './index.html',

@@ -1,4 +1,4 @@
-// 建築師法規衝刺刷題系統 - 核心邏輯 v2.5 (110~114年歷屆 400 題 + 條文命題 200 題 + 數字翻牌卡 59 張)
+// 建築師法規衝刺刷題系統 - 核心邏輯 v2.7 (110~114年歷屆 400 題 + 條文命題 220 題[含113~115新修法專題20題] + 數字翻牌卡 60 張)
 // 錯題、收藏查找用：歷屆真題＋條文命題（條文命題不混入每日順刷、專題與模擬考）
 const ALL_QUESTIONS = RAW_QUESTIONS.concat(typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS : []);
 
@@ -129,7 +129,7 @@ const app = {
     const seqEl = document.getElementById("seqProgressCount");
     if (seqEl) seqEl.innerText = Math.min(this.state.seqIndex, RAW_QUESTIONS.length);
     const nlmEl = document.getElementById("nlmProgressCount");
-    const nlmTotal = typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS.length : 200;
+    const nlmTotal = typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS.length : 220;
     if (nlmEl) nlmEl.innerText = Math.min(this.state.nlmSeqIndex, nlmTotal);
 
     const progressFill = document.getElementById("scoreProgressBar");
@@ -195,6 +195,7 @@ const app = {
   repeatCurrentMode() {
     const mode = this.state.quizMode;
     if (mode === "nlm") return this.startNlmQuiz();
+    if (mode === "newlaw") return this.startNewLawQuiz();
     if (mode === "mistake") return this.startMistakeQuiz();
     if (mode === "favorites") return this.startFavoritesQuiz();
     if (mode === "category" && this.state.currentCatId) return this.startCategoryQuiz(this.state.currentCatId);
@@ -228,6 +229,23 @@ const app = {
     }
     const start = this.state.seqIndex;
     this.state.currentQuiz = ordered.slice(start, start + this.DAILY_COUNT);
+
+    this.showView("view-quiz");
+    this.renderQuestion();
+  },
+
+  // 113～115 新修法專題 20 題（N201～N220）
+  startNewLawQuiz() {
+    this.stopMockTimer();
+    const list = (typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS : []).filter(q => q.q_num >= 201);
+    if (list.length === 0) {
+      alert("新修法專題題庫尚未載入！");
+      return;
+    }
+    this.state.quizMode = "newlaw";
+    this.state.currentIndex = 0;
+    this.state.quizCorrectCount = 0;
+    this.state.currentQuiz = list;
 
     this.showView("view-quiz");
     this.renderQuestion();
