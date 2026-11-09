@@ -26,7 +26,8 @@
 - `flashcards.js`：60 張數字翻牌卡。
 - `app.js`：SPA 狀態機、順刷進度、計時器、及格線雷達與同步邏輯。
 - `manifest.json`：PWA 應用設定檔。
-- `sw.js`：Service Worker 快取離線支援（Network-first，cache v2.4）。
+- `sw.js`：Service Worker 快取離線支援（Network-first，cache v2.7）。
+- `tests/check_app.py`：推送前檢查（由 `.prepush-test` 呼叫）。
 - `bundle.py`：單檔打包腳本，生成可免伺服器離線執行的 `index_bundle.html`。
 
 ## 🔗 關聯 Obsidian 知識庫（出處：architect_law_pwa）
@@ -37,8 +38,10 @@
 
 ## 🔄 跨機交接與部署紀錄（個人專案）
 
-- 最後更新：2026-10-14 23:35
-- 更新工具：Gemini Cloud Agent (雲端勘誤與前端優化 v2.7)
+- 目前版本：**v2.7.2**（GitHub main `86876bf`，2026-11-03）。版本沿革：v2.7 新修法專題 N201～N220（`1f8ef34`）→ v2.7.1 N215／N219／N220 解析改回條文字句（`ddc09af`）→ v2.7.2 12 題歷屆解析依法規 PDF 修正、112_18 答案改 A（`86876bf`）。
+- 進度與下一步以 `G:\我的雲端硬碟\個人專區\建築師法規APP\README.md` 為準；本節只記版本與部署方式。
+- 推送前檢查：`.prepush-test` → `python tests/check_app.py`（題庫一致性、答案在選項內、js 語法、單檔版是否已重新 bundle）；各機 repo 先跑一次 `python "G:\我的雲端硬碟\個人專區\私人電腦設定\pre-push\install_prepush.py" <repo>`。
+- 以下為 v2.7（2026-10-14 23:35，Gemini Cloud Agent）的工作紀錄，保留供查：
 - 狀態：v2.7 已完成法條原文全面校對（修正 8 張翻牌卡、31 題歷屆詳解條號與數值）與 5 項前端體驗優化，維持法規 APP 完全獨立運作。
 
 ### 本次完成工作（v2.7 法條校對與系統優化）
