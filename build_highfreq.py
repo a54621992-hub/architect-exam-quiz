@@ -20,6 +20,8 @@ if hasattr(sys.stdout, "reconfigure"):
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 MIN_HITS = 2
+# 使用者 2026-11-11 指定保留的翻牌卡（條號未達高頻門檻）：防火區劃 FC01～06、政府採購法 FC36～40、43、49
+KEEP_FC = {"FC01", "FC02", "FC03", "FC04", "FC05", "FC06", "FC36", "FC37", "FC38", "FC39", "FC40", "FC43", "FC49"}
 
 ART = re.compile(r"第\s*([\d.]+)\s*(條|節|點)(?:\s*之\s*(\d+))?|§\s*([\d.]+(?:-\d+)?)")
 SUB = re.compile(r"第[\d一二三四五六七八九十]+[項款目]|至|但書|前段|後段|附表[一二三四五六七八九十\d]*")
@@ -160,7 +162,8 @@ def main():
     nlm_head, nlm_all = load_js_array("nlm_questions_all.js")
     nlm_kept = [q for q in nlm_all if q["q_num"] >= 201 or is_high(q.get("law") or "", high_keys)]
     fc_head, fc_all = load_js_array("flashcards_all.js")
-    fc_kept = [c for c in fc_all if "修正" in (c.get("law") or "") or is_high(c.get("law") or "", high_keys)]
+    fc_kept = [c for c in fc_all if c["id"] in KEEP_FC or "修正" in (c.get("law") or "")
+               or is_high(c.get("law") or "", high_keys)]
     print("  條文命題 %d → %d 題（含新修法 %d 題）；翻牌卡 %d → %d 張" % (
         len(nlm_all), len(nlm_kept), sum(q["q_num"] >= 201 for q in nlm_kept), len(fc_all), len(fc_kept)))
 
