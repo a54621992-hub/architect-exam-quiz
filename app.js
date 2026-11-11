@@ -1,6 +1,6 @@
 // 建築師法規衝刺刷題系統 - 核心邏輯 (110~114年歷屆高頻題 + 核心記憶卡 + 條文命題 220 題[含113~115新修法專題20題] + 數字翻牌卡 60 張)
 // 版本號唯一來源：改版時同步改 version.json、sw.js CACHE_NAME、index.html 的 ?v=（tests/check_app.py 會檢查四處一致）
-const APP_VERSION = "2.8.0";
+const APP_VERSION = "2.9.0";
 const APP_BUILD_DATE = "2026-11-11";
 // 錯題、收藏查找用：歷屆真題＋條文命題（條文命題不混入每日順刷、專題與模擬考）
 const ALL_QUESTIONS = RAW_QUESTIONS.concat(typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS : []);
@@ -54,7 +54,7 @@ const app = {
     if (tag) tag.innerText = "v" + APP_VERSION;
     const info = document.getElementById("appVersionInfo");
     if (!info) return;
-    const base = `版本 v${APP_VERSION}（${APP_BUILD_DATE}）｜歷屆高頻 ${RAW_QUESTIONS.length} 題｜核心記憶卡 ${typeof CORE_CARDS !== "undefined" ? CORE_CARDS.length : 0} 張`;
+    const base = `版本 v${APP_VERSION}（${APP_BUILD_DATE}）｜歷屆高頻 ${RAW_QUESTIONS.length} 題｜核心記憶卡 ${typeof CORE_CARDS !== "undefined" ? CORE_CARDS.length : 0} 張｜條文命題 ${typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS.length : 0} 題｜翻牌卡 ${FLASHCARDS.length} 張`;
     info.innerText = base;
     if (!location.protocol.startsWith("http") || !navigator.onLine) {
       info.innerText = base + "｜離線，未檢查是否最新";
@@ -162,6 +162,7 @@ const app = {
     const nlmEl = document.getElementById("nlmProgressCount");
     const nlmTotal = typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS.length : 220;
     if (nlmEl) nlmEl.innerText = Math.min(this.state.nlmSeqIndex, nlmTotal);
+    document.querySelectorAll(".js-nlm-total").forEach(el => { el.innerText = nlmTotal; });
 
     const progressFill = document.getElementById("scoreProgressBar");
     const indicator = document.getElementById("passStatusIndicator");
