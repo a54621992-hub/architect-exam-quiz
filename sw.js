@@ -1,12 +1,14 @@
-const CACHE_NAME = 'arch-law-cache-v2.7';
+const CACHE_NAME = 'arch-law-cache-v2.8.0';
 const ASSETS = [
   './',
   './index.html',
-  './styles.css?v=2.5',
-  './app.js?v=2.5',
-  './questions.js?v=2.5',
-  './nlm_questions.js?v=2.5',
-  './flashcards.js?v=2.5',
+  './styles.css?v=2.8.0',
+  './app.js?v=2.8.0',
+  './questions.js?v=2.8.0',
+  './nlm_questions.js?v=2.8.0',
+  './flashcards.js?v=2.8.0',
+  './core_cards.js?v=2.8.0',
+  './version.json',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',

@@ -73,11 +73,32 @@ if len(fc_ids) != len(set(fc_ids)):
     errors.append("翻牌卡 id 重複")
 print("  翻牌卡：%d 張" % len(fc))
 
-for name in ("questions.js", "nlm_questions.js", "flashcards.js", "app.js", "sw.js"):
+cards = node_eval("core_cards.js", "CORE_CARDS")
+past_ids = {"%d-%02d" % (q["year"], q["q_num"]): q for q in qjson}
+for c in cards:
+    for p in c["points"]:
+        src = past_ids.get(p["src"])
+        if not src or src.get("analysis_key", "").strip() != p["text"]:
+            errors.append("核心記憶卡 %s 的 %s 與題庫不符：請重跑 python build_highfreq.py" % (c["id"], p["src"]))
+print("  核心記憶卡：%d 張" % len(cards))
+
+# 版本號四處一致：app.js、version.json、sw.js 快取名、index.html 的 ?v=
+ver = re.search(r'const APP_VERSION = "([^"]+)"', read("app.js")).group(1)
+if json.loads(read("version.json")).get("version") != ver:
+    errors.append("version.json 與 app.js APP_VERSION（%s）不一致" % ver)
+if "arch-law-cache-v%s'" % ver not in read("sw.js"):
+    errors.append("sw.js CACHE_NAME 不是 v%s" % ver)
+for name in ("index.html", "sw.js"):
+    other = sorted(set(re.findall(r"\?v=([\w.]+)", read(name))) - {ver})
+    if other:
+        errors.append("%s 的 ?v= 有非 %s 的版本：%s" % (name, ver, other))
+print("  版本：v%s" % ver)
+
+for name in ("questions.js", "nlm_questions.js", "flashcards.js", "core_cards.js", "app.js", "sw.js"):
     node_check(os.path.join(ROOT, name), name)
 
 bundle = read("index_bundle.html")
-for name in ("questions.js", "nlm_questions.js", "flashcards.js", "app.js"):
+for name in ("questions.js", "nlm_questions.js", "flashcards.js", "core_cards.js", "app.js"):
     if read(name) not in bundle:
         errors.append("index_bundle.html 未含最新 %s：請先跑 python bundle.py" % name)
 scripts = re.findall(r"<script>(.*?)</script>", bundle, re.S)

@@ -752,3 +752,37 @@ main {
     display: none;
   }
 }
+
+/* 核心記憶卡 */
+.core-cat-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin: 18px 0 8px;
+}
+.core-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.core-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  color: #a7f3d0;
+  font-size: 0.92rem;
+}
+.core-card .exp-key-box:last-child {
+  margin-bottom: 0;
+}
+.core-src {
+  margin-left: 8px;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  white-space: nowrap;
+}

@@ -1,4 +1,7 @@
-// 建築師法規衝刺刷題系統 - 核心邏輯 v2.7 (110~114年歷屆 400 題 + 條文命題 220 題[含113~115新修法專題20題] + 數字翻牌卡 60 張)
+// 建築師法規衝刺刷題系統 - 核心邏輯 (110~114年歷屆高頻題 + 核心記憶卡 + 條文命題 220 題[含113~115新修法專題20題] + 數字翻牌卡 60 張)
+// 版本號唯一來源：改版時同步改 version.json、sw.js CACHE_NAME、index.html 的 ?v=（tests/check_app.py 會檢查四處一致）
+const APP_VERSION = "2.8.0";
+const APP_BUILD_DATE = "2026-11-11";
 // 錯題、收藏查找用：歷屆真題＋條文命題（條文命題不混入每日順刷、專題與模擬考）
 const ALL_QUESTIONS = RAW_QUESTIONS.concat(typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS : []);
 
@@ -42,6 +45,33 @@ const app = {
     this.renderCategoryList();
     this.initFlashcardCategories();
     this.updateShuffleButton();
+    this.renderVersion();
+  },
+
+  // 版本顯示與最新版檢查（線上版才比對 version.json；單檔版與離線只顯示本機版本）
+  renderVersion() {
+    const tag = document.getElementById("appVersionTag");
+    if (tag) tag.innerText = "v" + APP_VERSION;
+    const info = document.getElementById("appVersionInfo");
+    if (!info) return;
+    const base = `版本 v${APP_VERSION}（${APP_BUILD_DATE}）｜歷屆高頻 ${RAW_QUESTIONS.length} 題｜核心記憶卡 ${typeof CORE_CARDS !== "undefined" ? CORE_CARDS.length : 0} 張`;
+    info.innerText = base;
+    if (!location.protocol.startsWith("http") || !navigator.onLine) {
+      info.innerText = base + "｜離線，未檢查是否最新";
+      return;
+    }
+    fetch("version.json", { cache: "no-store" })
+      .then(r => r.json())
+      .then(v => {
+        if (v.version === APP_VERSION) {
+          info.innerText = base + "｜✅ 已是最新版";
+        } else {
+          info.innerHTML = this.escapeHtml(base) + `｜<b style="color:#f87171;">⚠️ 線上最新為 v${this.escapeHtml(v.version)}，請按右上「更新」</b>`;
+        }
+      })
+      .catch(() => {
+        info.innerText = base + "｜無法檢查是否最新";
+      });
   },
 
   // 1. 考期倒數 (目標: 2026/11/14)
@@ -128,6 +158,7 @@ const app = {
 
     const seqEl = document.getElementById("seqProgressCount");
     if (seqEl) seqEl.innerText = Math.min(this.state.seqIndex, RAW_QUESTIONS.length);
+    document.querySelectorAll(".js-past-total").forEach(el => { el.innerText = RAW_QUESTIONS.length; });
     const nlmEl = document.getElementById("nlmProgressCount");
     const nlmTotal = typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS.length : 220;
     if (nlmEl) nlmEl.innerText = Math.min(this.state.nlmSeqIndex, nlmTotal);
@@ -207,7 +238,7 @@ const app = {
   // 5. 抽題演算法
   DAILY_COUNT: 30,
 
-  // 依年份順序排列（114→110，同年依題號），確保 400 題全數覆蓋不重複
+  // 依年份順序排列（114→110，同年依題號），確保高頻題全數覆蓋不重複
   getSequentialOrder() {
     return [...RAW_QUESTIONS].sort((a, b) => (b.year - a.year) || (a.q_num - b.q_num));
   },
@@ -221,7 +252,7 @@ const app = {
 
     const ordered = this.getSequentialOrder();
     if (this.state.seqIndex >= ordered.length) {
-      if (!confirm("🎉 400 題歷屆真題已全數刷完一輪！是否從 114 年第 1 題重新開始第二輪？（建議改刷「錯題大屠殺」）")) {
+      if (!confirm("🎉 " + ordered.length + " 題歷屆高頻題已全數刷完一輪！是否從 114 年第 1 題重新開始第二輪？（建議改刷「錯題大屠殺」）")) {
         return;
       }
       this.state.seqIndex = 0;
@@ -770,6 +801,45 @@ ${this.escapeHtml(quotePart)}</div>`;
     }
 
     this.showView("view-result");
+  },
+
+  // 9-1. 核心記憶卡（依專題分類；內容由 build_highfreq.py 自歷屆高頻題產生）
+  showCoreCards(catId) {
+    this.stopMockTimer();
+    const cards = typeof CORE_CARDS !== "undefined" ? CORE_CARDS : [];
+    const cats = [];
+    cards.forEach(c => {
+      let item = cats.find(x => x.id === c.cat_id);
+      if (!item) cats.push(item = { id: c.cat_id, name: c.cat_name, count: 0 });
+      item.count++;
+    });
+    const active = catId || "ALL";
+    let pills = `<button class="fc-pill-btn ${active === "ALL" ? "active" : ""}" onclick="app.showCoreCards('ALL')">全部 ${cards.length}</button>`;
+    cats.forEach(c => {
+      pills += `<button class="fc-pill-btn ${active === c.id ? "active" : ""}" onclick="app.showCoreCards('${c.id}')">${this.escapeHtml(c.name)} ${c.count}</button>`;
+    });
+    document.getElementById("coreCategoryPills").innerHTML = pills;
+
+    const list = active === "ALL" ? cards : cards.filter(c => c.cat_id === active);
+    let html = "";
+    let lastCat = "";
+    list.forEach(c => {
+      if (c.cat_id !== lastCat) {
+        html += `<h3 class="core-cat-title">${this.escapeHtml(c.cat_name)}</h3>`;
+        lastCat = c.cat_id;
+      }
+      html += `<div class="core-card">
+        <div class="core-card-head">
+          <b>${this.escapeHtml(c.law)}</b>
+          <span class="hot-pill">🔥 考 ${c.hits} 題｜${c.years.join("、")} 年</span>
+        </div>`;
+      c.points.forEach(p => {
+        html += `<div class="exp-key-box">💡 ${this.escapeHtml(p.text)}<span class="core-src">${p.src}</span></div>`;
+      });
+      html += `</div>`;
+    });
+    document.getElementById("coreCardList").innerHTML = html;
+    this.showView("view-core");
   },
 
   // 10. 數字翻牌卡邏輯 (支援進度記憶 + 分類篩選)
