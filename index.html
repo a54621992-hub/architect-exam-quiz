@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>建築師法規 40天衝刺刷題系統</title>
-  <link rel="stylesheet" href="styles.css?v=2.9.1">
+  <link rel="stylesheet" href="styles.css?v=2.10.0">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -68,7 +68,7 @@
           </div>
           <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-muted); margin-top: 4px; padding-top: 4px; border-top: 1px dashed rgba(255,255,255,0.1);">
             <span>歷屆順刷：<b id="seqProgressCount" style="color: #60a5fa;">0</b> / <span class="js-past-total">0</span> 題</span>
-            <span>條文順刷：<b id="nlmProgressCount" style="color: #38bdf8;">0</b> / <span class="js-nlm-total">0</span> 題</span>
+            <span>新修法專題順刷：<b id="nlmProgressCount" style="color: #38bdf8;">0</b> / <span class="js-nlm-total">0</span> 題</span>
           </div>
         </div>
 
@@ -118,18 +118,18 @@
           <div class="badge-counter">⏳ 建議用時：30 分鐘</div>
         </div>
 
-        <!-- 113~115 新修法專題 20 題 -->
-        <div class="action-card hot-border" onclick="app.startNewLawQuiz()">
+        <!-- 新修法專題（併入高頻條文命題） -->
+        <div class="action-card hot-border" onclick="app.startNlmQuiz()">
           <div>
             <div class="action-header">
               <span class="action-icon">🆕</span>
-              <div class="action-title">113～115 新修法專題 20 題</div>
+              <div class="action-title">新修法專題（含高頻條文命題）</div>
             </div>
             <div class="action-desc">
-              專攻防空避難 115.7.1 新制、都計省細則 115.8.12、都計通檢 114.7.22、都更危老原容積與國土法 10 年展延。
+              先練 115.7.1 防空避難新制、都計省細則 115.8.12、都計通檢 114.7.22、都更危老、國土法 10 年展延，再接歷屆高頻條文命題；共 <span class="js-nlm-total">0</span> 題，每題附條文原句。
             </div>
           </div>
-          <div class="badge-counter">🔥 必考修法焦點 N201～N220</div>
+          <div class="badge-counter">🔥 每回 20 題依序接續（新法題排最前）</div>
         </div>
 
         <!-- 錯題大屠殺 -->
@@ -165,22 +165,8 @@
       </div>
 
       <details class="more-modes">
-        <summary>更多模式（條文命題、翻牌卡、專題、全真模考、收藏）</summary>
+        <summary>更多模式（翻牌卡、專題、全真模考、收藏）</summary>
         <div class="action-grid">
-
-        <!-- 條文命題 220 題 -->
-        <div class="action-card" onclick="app.startNlmQuiz()">
-          <div>
-            <div class="action-header">
-              <span class="action-icon">📜</span>
-              <div class="action-title">條文命題（高頻條號＋新法）</div>
-            </div>
-            <div class="action-desc">
-              只留歷屆高頻條號與新修法的條文命題，共 <span class="js-nlm-total">0</span> 題；每題附條文原句並經程式比對法條原文。
-            </div>
-          </div>
-          <div class="badge-counter">📅 每回 20 題依序接續</div>
-        </div>
 
         <!-- 高頻數字翻牌卡 -->
         <div class="action-card number-border" onclick="app.showFlashcards()">
@@ -440,11 +426,11 @@
   </div>
 
   <!-- 題庫與核心腳本載入 -->
-  <script src="questions.js?v=2.9.1"></script>
-  <script src="nlm_questions.js?v=2.9.1"></script>
-  <script src="flashcards.js?v=2.9.1"></script>
-  <script src="core_cards.js?v=2.9.1"></script>
-  <script src="app.js?v=2.9.1"></script>
+  <script src="questions.js?v=2.10.0"></script>
+  <script src="nlm_questions.js?v=2.10.0"></script>
+  <script src="flashcards.js?v=2.10.0"></script>
+  <script src="core_cards.js?v=2.10.0"></script>
+  <script src="app.js?v=2.10.0"></script>
 
   <!-- PWA Service Worker 與安裝管理 -->
   <script>

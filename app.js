@@ -1,7 +1,7 @@
 // 建築師法規衝刺刷題系統 - 核心邏輯 (110~114年歷屆高頻題 + 核心記憶卡 + 條文命題 220 題[含113~115新修法專題20題] + 數字翻牌卡 60 張)
 // 版本號唯一來源：改版時同步改 version.json、sw.js CACHE_NAME、index.html 的 ?v=（tests/check_app.py 會檢查四處一致）
-const APP_VERSION = "2.9.1";
-const APP_BUILD_DATE = "2026-11-11";
+const APP_VERSION = "2.10.0";
+const APP_BUILD_DATE = "2026-11-12";
 // 錯題、收藏查找用：歷屆真題＋條文命題（條文命題不混入每日順刷、專題與模擬考）
 const ALL_QUESTIONS = RAW_QUESTIONS.concat(typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS : []);
 
@@ -286,7 +286,9 @@ const app = {
   // 條文命題：每回 20 題，依題號接續上次進度
   startNlmQuiz() {
     this.stopMockTimer();
-    const list = typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS : [];
+    // 新修法專題（含高頻條文命題）：新修法題（is_hot）排前面，其餘依題號，每回 20 題接續
+    const list = (typeof NLM_QUESTIONS !== "undefined" ? [...NLM_QUESTIONS] : [])
+      .sort((a, b) => (b.is_hot ? 1 : 0) - (a.is_hot ? 1 : 0) || a.q_num - b.q_num);
     if (list.length === 0) {
       alert("條文命題題庫尚未載入！");
       return;
@@ -366,16 +368,19 @@ const app = {
       "CAT10": "山坡地建築管理、公寓大廈管理條例、室內裝修管理"
     };
 
+    // 專題＝趨勢專章（T01～T05）優先，其餘沿用歷屆題原分類（topic_id 由 build_highfreq.py 寫入）
+    const trendDesc = { T01: "綠建築、節能、太陽光電、基地保水", T02: "都市更新條例、獎勵辦法、權利變換", T03: "機關委託技術服務廠商評選及計費辦法", T04: "公寓大廈管理條例與相關辦法", T05: "公共工程施工品質管理作業要點" };
     const catMap = {};
     RAW_QUESTIONS.forEach(q => {
-      if (!catMap[q.cat_id]) {
-        catMap[q.cat_id] = {
-          name: q.cat_name,
-          desc: catDescMap[q.cat_id] || (q.law ? q.law.split("§")[0] : "營建法規"),
+      const id = q.topic_id || q.cat_id;
+      if (!catMap[id]) {
+        catMap[id] = {
+          name: q.topic_name || q.cat_name,
+          desc: trendDesc[id] || catDescMap[id] || "營建法規",
           count: 0
         };
       }
-      catMap[q.cat_id].count++;
+      catMap[id].count++;
     });
 
     let html = "";
@@ -412,7 +417,7 @@ const app = {
     this.state.currentIndex = 0;
     this.state.quizCorrectCount = 0;
 
-    const filtered = RAW_QUESTIONS.filter(q => q.cat_id === catId);
+    const filtered = RAW_QUESTIONS.filter(q => (q.topic_id || q.cat_id) === catId);
     this.state.currentQuiz = filtered.sort(() => 0.5 - Math.random()).slice(0, 20);
 
     this.showView("view-quiz");

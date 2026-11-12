@@ -56,6 +56,27 @@ def parse_law(law):
     return list(dict.fromkeys(keys))
 
 
+TRENDS = [
+    ("T01", "趨勢01 綠建築與節能", r"綠建築|節能|太陽光電|基地保水|再生能源"),
+    ("T02", "趨勢02 都市更新條例", r"都市更新"),
+    ("T03", "趨勢03 技服評選與計費", r"技術服務廠商|評選及計費"),
+    ("T04", "趨勢04 公寓大廈管理", r"公寓大廈"),
+    ("T05", "趨勢05 公共工程品管", r"施工品質管理|品質管理作業|工程品質"),
+]
+
+
+def trend_of_law(text):
+    for tid, tname, pat in TRENDS:
+        if re.search(pat, text or ""):
+            return tid, tname
+    return None
+
+
+def trend_of(q):
+    """題目屬哪一趨勢專章（依 law 欄位；綠建築另認 cat_id C12）。"""
+    return trend_of_law(q.get("law")) or (("T01", TRENDS[0][1]) if q.get("cat_id") == "C12" else None)
+
+
 ALIAS = [
     ("建築技術規則建築設計施工編", ("建築技術規則建築設計施工編", "建築技術規則施工編", "建築設計施工編")),
     ("建築物無障礙設施設計規範", ("無障礙設施設計規範", "無障礙設計規範")),
@@ -127,11 +148,20 @@ def main():
             by_key[k].append(q)
     high = {k: v for k, v in by_key.items() if len(v) >= MIN_HITS}
     keep_ids = {q["id"] for v in high.values() for q in v}
-    kept = [q for q in allq if q["id"] in keep_ids]
+    # 趨勢專章（四、趨勢分析專章）整章視為高頻：專章題即使條號只考過 1 題也保留
+    trend_ids = {q["id"] for q in allq if trend_of(q)}
+    kept = []
+    for q in allq:
+        if q["id"] in keep_ids or q["id"] in trend_ids:
+            q = dict(q)
+            t = trend_of(q)
+            q["topic_id"], q["topic_name"] = t if t else (q["cat_id"], q["cat_name"])
+            kept.append(q)
 
     cards = []
     for (name, art), qs in high.items():
-        cat = collections.Counter((q["cat_id"], q["cat_name"]) for q in qs).most_common(1)[0][0]
+        t = trend_of_law(name)
+        cat = t if t else collections.Counter((q["cat_id"], q["cat_name"]) for q in qs).most_common(1)[0][0]
         points, seen = [], set()
         for q in sorted(qs, key=lambda x: (-x["year"], x["q_num"])):
             text = (q.get("analysis_key") or "").strip()
@@ -147,9 +177,23 @@ def main():
             "years": sorted({q["year"] for q in qs}, reverse=True),
             "points": points,
         })
+    # 去重：每一題的重點只放在一張卡（優先放考得最多的條號），相同文字只留一次；掏空的卡刪除
+    n_before = (len(cards), sum(len(c["points"]) for c in cards))
+    owner, seen_text = {}, set()
+    for c in sorted(cards, key=lambda c: (-c["hits"], c["law"])):
+        keep_pts = []
+        for p in c["points"]:
+            if p["src"] in owner or p["text"] in seen_text:
+                continue
+            owner[p["src"]] = c["law"]
+            seen_text.add(p["text"])
+            keep_pts.append(p)
+        c["points"] = keep_pts
+    cards = [c for c in cards if c["points"]]
     cards.sort(key=lambda c: (c["cat_id"], -c["hits"], c["law"]))
     for i, c in enumerate(cards, 1):
         c["id"] = "K%03d" % i
+    print("  核心卡去重：%d 張 %d 重點 → %d 張 %d 重點" % (n_before + (len(cards), sum(len(c["points"]) for c in cards))))
 
     print("【高頻篩選】")
     print("  全集 %d 題；條號 %d 個，其中高頻（≥%d 題）%d 個" % (len(allq), len(by_key), MIN_HITS, len(high)))
