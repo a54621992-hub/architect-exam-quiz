@@ -1,6 +1,6 @@
 // 建築師法規衝刺刷題系統 - 核心邏輯 (110~114年歷屆高頻題 + 核心記憶卡 + 條文命題 220 題[含113~115新修法專題20題] + 數字翻牌卡 60 張)
 // 版本號唯一來源：改版時同步改 version.json、sw.js CACHE_NAME、index.html 的 ?v=（tests/check_app.py 會檢查四處一致）
-const APP_VERSION = "2.10.0";
+const APP_VERSION = "2.10.1";
 const APP_BUILD_DATE = "2026-11-12";
 // 錯題、收藏查找用：歷屆真題＋條文命題（條文命題不混入每日順刷、專題與模擬考）
 const ALL_QUESTIONS = RAW_QUESTIONS.concat(typeof NLM_QUESTIONS !== "undefined" ? NLM_QUESTIONS : []);

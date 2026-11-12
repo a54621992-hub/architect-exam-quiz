@@ -154,7 +154,8 @@ def main():
     for q in allq:
         if q["id"] in keep_ids or q["id"] in trend_ids:
             q = dict(q)
-            t = trend_of(q)
+            # 專題：趨勢專章優先；舊分類 C11 公寓大廈併入趨勢04（只改專題歸屬，不影響保留規則）
+            t = trend_of(q) or ((TRENDS[3][0], TRENDS[3][1]) if q["cat_id"] == "C11" else None)
             q["topic_id"], q["topic_name"] = t if t else (q["cat_id"], q["cat_name"])
             kept.append(q)
 
